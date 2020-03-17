@@ -18,6 +18,7 @@ record 'v env =
   sccs  :: "'v set set"
   sn    :: nat
   lowlink   :: "'v \<Rightarrow> nat"  \<comment> \<open>Map to keep track of lowlink\<close>
+  nodeIndex :: "'v \<Rightarrow> nat"
   exploredNodes :: "'v set"
 
 
@@ -93,7 +94,8 @@ definition add_stack_incr:: "'v \<Rightarrow> 'v env \<Rightarrow> 'v env" where
       e \<lparr> stack := x # (stack e),
           exploredNodes := {x} \<union> (exploredNodes e),
           sn := sn e + 1,
-          lowlink := (lowlink e) (x := sn e) \<rparr>"
+          lowlink := (lowlink e) (x := sn e), 
+          nodeIndex := (nodeIndex e) (x := sn e)\<rparr>"
                      
 abbreviation infty ("\<infinity>") where
   \<comment> \<open>nat exceeding any one used as a vertex number during the algorithm\<close>
@@ -118,43 +120,52 @@ section \<open>Tarjan's algorithm implementation\<close>
                                    
 subsection \<open>Function definitions\<close>
                                   
-function (domintros) visit:: "'v \<Rightarrow> 'v env  \<Rightarrow> (nat * 'v env)" and dfs_node:: "'v set \<Rightarrow> 'v env \<Rightarrow> (nat * 'v env)"  where 
-"visit v e = (let (l1, e1) dfs_node (sucessors v) (add_stack_incr v e) in 
-                if l1 \<noteq> (lowlink e) then (l1,e1) (*Lowlink has been changed*)
-                else (let (scc, s) split_list v (stack e1) 
-            in
-              (\<infinity>,            
-                \<lparr>stack = s,
-                sccs = (set scc) \<union> (sccs e1),     
-                sn = sn e1,                              
-                lowlink = set_infty scc (lowlink e1),
-                exploredNodes = exploredNodes e1\<rparr>)))" and
-"dfs_node {} e = (\<infinity>, e)"|                   
-"dfs_node neighbours e = (let x = SOME x. x \<in> neightbours;
-                            own_LowLink = (if x \<in> exploredNotes then (num e x, e) else visit x e);
-                            sibling_LowLink = dfs_node (neighbours - {x}) (snd own_LowLink)       
-                            in (min (fst own_LowLink) (fst sibling_LowLink), snd sibling_LowLink))"
-                     
+function (domintros) visit and dfs where
+  "visit x e  =
+    (let (newLowLink, e1) = dfs (edges x) (add_stack_incr x e) in
+      if newLowLink < (nodeIndex e x) then (newLowLink, e1)
+      else
+       (let (scc,rest) = split_list x (stack e1) in
+         (\<infinity>, 
+           \<lparr> stack = rest,
+             sccs = insert (set scc) (sccs e1),
+             sn = sn e1,
+             lowlink = lowlink e1,
+             nodeIndex = nodeIndex e1,
+             exploredNodes = exploredNodes e1 \<rparr> )))"
+| "dfs roots e =
+    (if roots = {} then (\<infinity>, e)
+    else
+      (let x = SOME x. x \<in> roots;
+           \<comment> \<open>If node is unexplored explore it using dfs\<close>
+           res1 = (if x \<in> exploredNodes e then (lowlink e x, e) else visit x e);
+           res2 = dfs (roots - {x}) (snd res1)
+      in (min (fst res1) (fst res2), snd res2) ))" \<comment> \<open>Return lowest lowlink and current env\<close>
+  by pat_completeness auto
+
+text\<open>Setup environment\<close>
+definition init_env where
+  "init_env \<equiv> \<lparr> stack = [],
+                sccs = {},           
+                sn = 0,
+                lowlink = \<lambda>_. 0,
+                nodeIndex = \<lambda>_. 0,
+                exploredNodes = {}\<rparr>"
+
 (*Get SCC from the environment after performing tarjan*)
 definition tarjan where
-  "tarjan \<equiv> sccs (snd (dfs_node vertices init_env))"
-                                                  
-                                    
-definition init_env where
-  "init_env \<equiv> \<lparr> exploredNotes = {}, stack = [],
-                sccs = {},          lowlink = \<lambda>_. 0, 
-                sn = 0\<rparr>"
-                                    
-
-                              
-function tarjan_pre:: "'v \<Rightarrow> 'v env \<Rightarrow> bool" where
-"tarjan_pre x e = (card exploredNodes e) = 0 
-                   \<and> sn e = 0  \<and> (stack e) = [] \<and> (card sccs e) = 0"
+  "tarjan \<equiv> sccs (snd (dfs vertices init_env))"
+                                                                                                                   
+definition tarjan_pre:: "'v \<Rightarrow> 'v env \<Rightarrow> bool" where
+"tarjan_pre x e \<equiv> exploredNodes e = {} 
+                   \<and> sn e = 0  
+                   \<and> (stack e) = [] 
+                   \<and> card (sccs e) = 0"
                                       
-function tarjan_post:: "'v \<Rightarrow> 'v env \<Rightarrow> 'v env \<Rightarrow> bool" where
-"tarjan_post x e = x \<in> vertices 
-                    \<and> (card exploredNotes e) = (card vertices)
-                    \<and> sn e = (card vertices)"
+definition tarjan_post:: "'v \<Rightarrow> 'v env \<Rightarrow> 'v env \<Rightarrow> bool" where
+"tarjan_post x e e' \<equiv> x \<in> vertices
+                    \<and> card (exploredNodes e') = card vertices
+                    \<and> sn e' = card vertices"
 
                              
 
@@ -164,12 +175,12 @@ text \<open>How to make invariants?\<close>
   Possible useful invariants could be the stack should always contain only unique elements
   And All The elements in the stack should also be present in the exploredNodes
 *)                                                    
-definition invariants where          
- "invariants e \<equiv> (\<forall>x set (stack e). x \<in> (exploredNodes e)
-                 \<and> card set (stack e) = length (stack e)"
+definition invariants:: "'v env \<Rightarrow> bool" where          
+ "invariants e \<equiv> \<forall>x \<in> set (stack e). x \<in> (exploredNodes e)
+                  \<and> distinct (stack e)"
                                                                       
 definition exploredNodes_num where
-  "exploredNodes_num e \<equiv> \<forall>v \<in> exploredNodes e. v \<in> vertices \<and> num e v > 0"
+  "exploredNodes_num e \<equiv> \<forall>v \<in> exploredNodes e. v \<in> vertices \<and> nodeIndex e v > 0"
                                    
                             
 text \<open>                          
