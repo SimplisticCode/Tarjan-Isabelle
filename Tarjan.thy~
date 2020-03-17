@@ -88,7 +88,7 @@ text \<open>
   Push a vertex on the stack and increment the sequence number.
   The pushed vertex is associated with the (old) sequence number.
 \<close>
-definition add_stack_incr:: "'v \<Rightarrow> 'v env \<Rightarrow> 'v env" where 
+fun add_stack_incr:: "'v \<Rightarrow> 'v env \<Rightarrow> 'v env" where 
   "add_stack_incr x e =
       e \<lparr> stack := x # (stack e),
           exploredNodes := {x} \<union> (exploredNodes e),
@@ -105,7 +105,7 @@ fun split_list:: "'v \<Rightarrow> 'v list \<Rightarrow> ('v list * 'v list)"  w
     (if x = y then ([x], xs) else 
        (let (l, r) = split_list x xs in
          (y # l, r)))" 
-           (*
+           
 lemma split_list_concat:           
   \<comment> \<open>Concatenating the two sublists produced by @{text "split_list"}
       yields back the original list.\<close>     
@@ -113,12 +113,12 @@ lemma split_list_concat:
   shows "(fst (split_list x xs)) @ (snd (split_list x xs)) = xs"
   using assms by (induct xs) (auto simp: split_def)  
                                 
- *)
+ 
 section \<open>Tarjan's algorithm implementation\<close>
                                    
 subsection \<open>Function definitions\<close>
                                   
-function (domintros) visit:: "'v \<Rightarrow> 'v env  \<Rightarrow> (nat * 'v env)" and dfs_node:: "'v set \<Rightarrow> 'v env \<Rightarrow> (nat * 'v env)"  where 
+function visit:: "'v \<Rightarrow> 'v env  \<Rightarrow> (nat * 'v env)" where 
 "visit v e = (let (l1, e1) dfs_node (sucessors v) (add_stack_incr v e) in 
                 if l1 \<noteq> (lowlink e) then (l1,e1) (*Lowlink has been changed*)
                 else (let (scc, s) split_list v (stack e1) 
@@ -128,7 +128,9 @@ function (domintros) visit:: "'v \<Rightarrow> 'v env  \<Rightarrow> (nat * 'v e
                 sccs = (set scc) \<union> (sccs e1),     
                 sn = sn e1,                              
                 lowlink = set_infty scc (lowlink e1),
-                exploredNodes = exploredNodes e1\<rparr>)))" and
+                exploredNodes = exploredNodes e1\<rparr>)))"
+                                                 
+fun dfs_node:: "'v set \<Rightarrow> 'v env \<Rightarrow> (nat * 'v env)" where
 "dfs_node {} e = (\<infinity>, e)"|                   
 "dfs_node neighbours e = (let x = SOME x. x \<in> neightbours;
                             own_LowLink = (if x \<in> exploredNotes then (num e x, e) else visit x e);
