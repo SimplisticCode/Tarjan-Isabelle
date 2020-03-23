@@ -10,7 +10,7 @@ text \<open>
 \<close>
 
 text \<open>
-  Definition of an auxiliary data structure holding local variables
+  Definition of the environment to hold local variables
   during the execution of Tarjan's algorithm.
 \<close>
 record 'v env =
@@ -123,6 +123,7 @@ subsection \<open>Function definitions\<close>
 function (domintros) visit and dfs where
   "visit x e  =
     (let (newLowLink, e1) = dfs (edges x) (add_stack_incr x e) in
+  \<comment>\<open>Extract a function\<close>
       if newLowLink < (nodeIndex e x) then (newLowLink, e1)
       else
        (let (scc,rest) = split_list x (stack e1) in
@@ -143,6 +144,7 @@ function (domintros) visit and dfs where
       in (min (fst res1) (fst res2), snd res2) ))" \<comment> \<open>Return lowest lowlink and current env\<close>
   by pat_completeness auto
 
+(*Use Monads in state of state*)
 text\<open>Setup environment\<close>
 definition init_env where
   "init_env \<equiv> \<lparr> stack = [],
