@@ -82,7 +82,6 @@ definition set_num:: "'a env \<Rightarrow> ('a \<Rightarrow> int) \<Rightarrow> 
              sn = sn v,
              num = x \<rparr>"
 
-
 definition put_black:: "'a set \<Rightarrow> ('a env, unit) state" where "put_black x = do { v \<leftarrow> get; put (set_black v x) }"
 definition put_gray:: "'a set \<Rightarrow> ('a env, unit) state" where "put_gray x = do { v \<leftarrow> get; put (set_gray v x) }"
 definition put_stack:: "'a list \<Rightarrow> ('a env, unit) state" where "put_stack x = do { v \<leftarrow> get; put (set_stack v x) }"
@@ -91,9 +90,6 @@ definition put_sn:: "nat \<Rightarrow> ('a env, unit) state" where "put_sn x = d
 definition put_num:: "('a \<Rightarrow> int) \<Rightarrow> ('a env, unit) state" where "put_num x = do { v \<leftarrow> get; put (set_num v x) }"
 
 definition skip:: "('a env, unit) state" where "skip = State (\<lambda>x. ((),x))"
-
-
-
 
 definition colored where
   "colored e \<equiv> black e \<union> gray e"
@@ -253,7 +249,7 @@ definition insert_gray:: "'v \<Rightarrow> ('v env, unit) state" where
     }"
 
 definition insert_stack:: "'v  \<Rightarrow> ('v env, unit) state" where
-"insert_stack x \<equiv> do{
+"insert_stack x \<equiv> do {
        st \<leftarrow> get_stack;
        st \<leftarrow> return (x # st);
        put_stack st
@@ -274,12 +270,12 @@ definition update_num:: "'v \<Rightarrow> ('v env, unit) state" where
 }"
 
 definition add_stack_incr:: "'v \<Rightarrow> ('v env, unit) state" where
-  "add_stack_incr x = do {
-      insert_gray x;
-      insert_stack x;
-      count_up_sn;
-      update_num x
-    }"
+"add_stack_incr x = do {
+    insert_gray x;
+    insert_stack x;
+    count_up_sn;
+    update_num x
+  }"
 
 text \<open>
   Add vertex @{text x} to the set of black vertices in @{text e}
@@ -309,10 +305,12 @@ text {*
 *}
 
 text\<open>Look into problems here!\<close>
+text\<open>dfs is not change the state of the program (The state_monad). 
+    It is only dfs1 that are change the state of the program\<close>
 function (domintros) dfs1 and dfs where
   "dfs1 x = do {
     add_stack_incr x;
-    n1 \<leftarrow> dfs (successors x);
+    let n1 = dfs (successors x);
     sn \<leftarrow> get_sn;
     if n1 < int sn then do{
       add_black x;
@@ -321,24 +319,23 @@ function (domintros) dfs1 and dfs where
     else do{
       st \<leftarrow> get_stack;
       insert_black x;
-      let l = (fst(split_list x st));
+      let (l,r) = split_list x st;
       insert_sccs l;
-      put_stack (snd(split_list x st));
+      put_stack r;
       num \<leftarrow> get_num;
-      num \<leftarrow> (set_infty (fst(split_list x st)) num);
+      num \<leftarrow> set_infty l num;
       put_num num;
       return \<infinity>
     }
   }"
 | "dfs roots = do {
     if roots = {} then do {return \<infinity>}
-    else do{
-       x \<leftarrow> SOME x. x \<in> roots;
+    else do {
+       let x = (SOME x. x \<in> roots);
        num \<leftarrow> get_num;
-       res1 \<leftarrow> (if num x \<noteq> -1 then num x else dfs1 x);
-       roots \<leftarrow> roots - {x};
-       res2 \<leftarrow> dfs roots;
-      return (min res1 res2)
+       res1 \<leftarrow> if num x \<noteq> -1 then num x else dfs1 x;
+       res2 \<leftarrow> dfs (roots - {x});
+       return (min res1 res2)
     }
   }"
   by pat_completeness auto
@@ -387,11 +384,10 @@ lemma black_increasing:
 
 text\<open>Is this the way to do it?\<close>
 lemma black_increasing_monad:
-  "dfs1_dfs_dom (Inl (x, e)) \<Longrightarrow> do{
-    bl1 \<leftarrow> get_black;
+"\<lbrakk>\<lbrakk>dfs1_dfs_dom (Inl (x,e)); black e = bl1\<rbrakk>\<rbrakk> \<Longrightarrow> do{
     run_state (dfs1 x) e;
     bl2 \<leftarrow> get_black;
-    return (bl1 \<subseteq> bl2)    
+    return (bl1 \<subseteq> bl2)
   }"
   "dfs1_dfs_dom (Inr (roots,e)) \<Longrightarrow> do{
       b1 \<leftarrow> get_black;
