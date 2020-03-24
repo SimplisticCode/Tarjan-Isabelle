@@ -265,20 +265,22 @@ definition count_up_sn:: "('v env, unit) state" where
       put_sn (sn + 1)
 }"
 
+text\<open>Ask Stefan and look into this\<close>
 definition update_num:: "'v \<Rightarrow> ('v env, unit) state" where
 "update_num x \<equiv> do {
       num \<leftarrow> get_num;
       sn \<leftarrow> get_sn;
-      num \<leftarrow> return (num (x := int(sn)));
+      num \<leftarrow> return (x := sn);
       put_num num
 }"
 
+(*Add this update_num x
+*)
 definition add_stack_incr:: "'v \<Rightarrow> ('v env, unit) state" where
   "add_stack_incr x = do {
       insert_gray x;
       insert_stack x;
-      count_up_sn;
-      update_num x
+      count_up_sn
     }"
 
 text \<open>
@@ -308,30 +310,26 @@ text {*
   function operating on a set of vertices.
 *}
 
+
 text\<open>Look into problems here!\<close>
 function (domintros) dfs1 and dfs where
   "dfs1 x = do {
     add_stack_incr x;
     n1 \<leftarrow> dfs (successors x);
     sn \<leftarrow> get_sn;
-    if n1 < int sn then do{
+    if n1 < int (sn) then do{
       add_black x;
-      return n1
-    }
+      return n1}
     else do{
       st \<leftarrow> get_stack;
       insert_black x;
-      let l = (fst(split_list x st));
-      insert_sccs l;
       put_stack (snd(split_list x st));
-      num \<leftarrow> get_num;
-      num \<leftarrow> (set_infty (fst(split_list x st)) num);
-      put_num num;
-      return \<infinity>
+      insert_sccs (fst(split_list x st));
+     return \<infinity>
     }
   }"
 | "dfs roots = do {
-    if roots = {} then do {return \<infinity>}
+    if roots = {} then do{return \<infinity>}
     else do{
        x \<leftarrow> SOME x. x \<in> roots;
        num \<leftarrow> get_num;
@@ -351,9 +349,8 @@ definition init_env:: "'a env" where
 definition init_state_env:: "('a env, unit) state" where
   "init_state_env \<equiv> State (\<lambda>x. ((),init_env))"
 
-text\<open>How shoudl this be done instead?\<close>
 definition tarjan where
-  "tarjan \<equiv> run_state (dfs vertices) init_state_env"
+  "tarjan \<equiv> run_state dfs vertices init_state_env"
 
 subsection \<open>Well-definedness of the functions\<close>
 
@@ -384,22 +381,6 @@ lemma black_increasing:
   by (induct rule: dfs1_dfs.pinduct,
       (fastforce simp: dfs1.psimps dfs.psimps case_prod_beta 
                    add_black_def add_stack_incr_def)+)
-
-text\<open>Is this the way to do it?\<close>
-lemma black_increasing_monad:
-  "dfs1_dfs_dom (Inl (x, e)) \<Longrightarrow> do{
-    bl1 \<leftarrow> get_black;
-    run_state (dfs1 x) e;
-    bl2 \<leftarrow> get_black;
-    return (bl1 \<subseteq> bl2)    
-  }"
-  "dfs1_dfs_dom (Inr (roots,e)) \<Longrightarrow> do{
-      b1 \<leftarrow> get_black;
-      run_state (dfs roots) e;
-      bl2 \<leftarrow> get_black;
-      return (bl1 \<subseteq> bl2)    
-    }
-  sorry
 
 text \<open>
   Similarly, the set of nodes colored black or gray 

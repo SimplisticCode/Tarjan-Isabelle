@@ -312,7 +312,7 @@ text\<open>Look into problems here!\<close>
 function (domintros) dfs1 and dfs where
   "dfs1 x = do {
     add_stack_incr x;
-    n1 \<leftarrow> dfs (successors x);
+    let n1 = dfs (successors x);
     sn \<leftarrow> get_sn;
     if n1 < int sn then do{
       add_black x;
@@ -321,11 +321,11 @@ function (domintros) dfs1 and dfs where
     else do{
       st \<leftarrow> get_stack;
       insert_black x;
-      let l = (fst(split_list x st));
+      let (l,r) = split_list x st;
       insert_sccs l;
-      put_stack (snd(split_list x st));
+      put_stack r;
       num \<leftarrow> get_num;
-      num \<leftarrow> (set_infty (fst(split_list x st)) num);
+      num \<leftarrow> set_infty l num;
       put_num num;
       return \<infinity>
     }
@@ -333,11 +333,10 @@ function (domintros) dfs1 and dfs where
 | "dfs roots = do {
     if roots = {} then do {return \<infinity>}
     else do{
-       x \<leftarrow> SOME x. x \<in> roots;
+       let x = (SOME x. x \<in> roots);
        num \<leftarrow> get_num;
-       res1 \<leftarrow> (if num x \<noteq> -1 then num x else dfs1 x);
-       roots \<leftarrow> roots - {x};
-       res2 \<leftarrow> dfs roots;
+       res1 = (if num x \<noteq> -1 then num x else dfs1 x);
+       res2 = dfs (roots - {x});
       return (min res1 res2)
     }
   }"
