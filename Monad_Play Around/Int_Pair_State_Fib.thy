@@ -1,4 +1,4 @@
-theory Int_Pair_State_Monad
+theory Int_Pair_State_Fib
 imports 
   Main
   "~~/src/HOL/Library/State_Monad"
@@ -17,13 +17,6 @@ definition set_snd:: "'a pair \<Rightarrow> 'a \<Rightarrow> 'a pair" where "set
 definition put_fst:: "'a \<Rightarrow> ('a pair, unit) state" where "put_fst x = do { v \<leftarrow> get; put (set_fst v x) }"
 definition put_snd:: "'a \<Rightarrow> ('a pair, unit) state" where "put_snd x = do { v \<leftarrow> get; put (set_snd v x) }"
 definition skip:: "('a pair, unit) state" where "skip = State (\<lambda>x. ((),x))"
-
-
-definition inject_npu:: "(nat pair, unit) state" where "inject_npu = State (\<lambda>x. ((),x))"
-
-fun monfact:: "nat \<Rightarrow> (nat pair, unit) state" where
-mf1: "monfact 0 = skip" |
-mf2: "monfact (Suc n) = do { y \<leftarrow> get_fst; y \<leftarrow> return (y * (Suc n)); put_fst y; monfact n }"
 
 fun fibacc :: "nat \<Rightarrow> nat => nat \<Rightarrow> nat" where
 fa1: "fibacc 0 a b = a"| 
@@ -45,8 +38,8 @@ lemma [simp]: "(fib n)*(fib (Suc (Suc n))) \<le> (fib (Suc n)) * (fib (Suc n)) +
               \<and> (fib (Suc n))*(fib (Suc n)) \<le> (fib n)* (fib (Suc (Suc n))) + 1"
   apply (induct_tac n)
    apply simp
-  apply (simp add: right_mult_distrib left_distrib)
-done
+  by (smt add_Suc add_mult_distrib2 eq_iff le_Suc_eq)
+
 
 lemma [simp]: "fibacc (Suc n) 0 1 > 0"
   proof (induction n)
@@ -55,9 +48,10 @@ lemma [simp]: "fibacc (Suc n) 0 1 > 0"
   next
     case (Suc n)
     assume "fibacc n 0 1 > 0"
-    from this have "fibacc (Suc n) 0 1 \<ge> fibacc n 0 1" by (simp add: fa1 fa2 fa3)
-    from this and `fibacc n 0 1 > 0` show  "fibacc (Suc n) 0 1 > 0"
-      using (Suc.IH) by blast
+    from this have "fibacc (Suc n) 0 1 \<ge> fibacc n 0 1" sorry
+    from this and `fibacc n 0 1 > 0` have  "fibacc (Suc n) 0 1 > 0"
+      using Suc.IH by (blast)
+    then show "fibacc (Suc n) 0 1 > 0" by auto
   qed
 
 lemma [simp]: "fib (Suc n) > 0"
@@ -80,15 +74,13 @@ next
   sorry
 qed
 
-
-
 text\<open>The fibonacci function does always return the result at the fst value of the pair. The initial state passed in should be (0,1)\<close>
 fun monfib:: "nat \<Rightarrow> (nat pair, unit) state" where
   "monfib 0 = skip" |
   "monfib (Suc 0) = do {a \<leftarrow> get_snd; put_fst a}" |
   "monfib (Suc (Suc n)) = do { a \<leftarrow> get_fst; b \<leftarrow> get_snd; temp_b \<leftarrow> return b; b \<leftarrow> return (a + b); put (temp_b,b); monfib (Suc n)}"
 
-value \<open>fst(snd(run_state (monfib 4) e))\<close>
+value \<open>fst(snd(run_state (monfib 4) x))\<close>
 
 lemma fib_add:
   "fib (n + k + 1) = fib (k + 1) * fib (n + 1) + fib k * fib n"
@@ -112,9 +104,12 @@ proof (induct n rule: fib_induct)
 qed
 
 
+value "fst(snd (run_state (monfib (Suc (Suc 4))) x)) = fst(snd (run_state (monfib 4) x)) + fst(snd (run_state (monfib (Suc 4)) x))"
+
+
 lemma monfib_aux: "fst(snd (run_state (monfib (Suc (Suc n))) x)) = fst(snd (run_state (monfib n) x)) + fst(snd (run_state (monfib (Suc n)) x))"
   apply (induction n arbitrary: x)
-   apply (simp add:  skip_def)
+   apply (simp only:  skip_def fst_def snd_def)
    apply (simp add: get_def set_fst_def)
   sledgehammer
 
@@ -123,78 +118,6 @@ lemma fib_basic: "fst(snd(run_state (monfib n) x)) = fibacc n ((fst x)::nat) ((s
   apply (induction n arbitrary: x)
    apply (simp add:  skip_def)
   sorry
-
-value \<open>fst(snd (run_state (monfact 10) e))\<close>
-lemma monfact_mult: "fst(snd (run_state (monfact n) (a * b, y))) =  b * fst(snd (run_state (monfact n) (a, y)))"
-  apply (induction n arbitrary: a b)
-  apply (simp add: skip_def)
-  apply (simp add: return_def put_def get_def)
-  by (metis mult.assoc mult.commute mult_Suc)
-  
-lemma monfact_shift: "fst(snd (run_state (monfact (Suc n)) (x,y))) = fst(snd (run_state (monfact n) ((Suc n) * x, y)))"
-  apply (induction n arbitrary: x y)
-  apply (simp add: get_fst_def put_fst_def return_def)
-   apply (simp add: put_fst_def return_def get_def fst_def snd_def)
-  sorry
-
-lemma monfact_aux: "fst(snd (run_state (monfact (Suc n)) x)) = (Suc n) * fst(snd (run_state (monfact n) x))"
-  apply (induction n arbitrary: x)
-   apply (simp add: skip_def return_def get_def put_def)
-  by (metis monfact_mult monfact_shift mult.commute)
-
-fun accfact:: "nat \<Rightarrow> nat \<Rightarrow> nat" where
-af1:  "accfact 0 a = a" |
-af2: "accfact (Suc n) a = accfact n (a * Suc n)"
-
-lemma accfact_mult: "accfact n (a * b) = b * accfact n a"
-  apply (induction n arbitrary: a b)
-   apply (simp)
-  apply (simp only: af2)
-  by (simp add: semiring_normalization_rules(19))
-
-lemma accfact_aux: "accfact (Suc n) x = (Suc n) * accfact n x"
-  apply (induction n)
-   apply simp
-  using Int_Pair_State_Monad.af2 accfact_mult by presburger
-
-
-value "fst(snd (run_state (monfact 6) (1::nat, y::nat)))"
-value "accfact 6 1"
-
-
-lemma fact_basic: "fst(snd (run_state (monfact n) (x::nat,y::nat))) = accfact n (fst(x::nat,y::nat))"
-  apply (induction n arbitrary: x y)
-   apply (simp add: put_fst_def get_fst_def snd_def fst_def skip_def)
-  sledgehammer
-
-
-
-lemma monad_example1: "fst(snd(run_state (do { put (1, 1) }) (0, 0))) = 1" 
-  by (simp add: put_def)
-
-lemma monad_example2: "snd(snd(run_state (do { put (1, 1) }) (0, 0))) = 1" 
-  by (simp add: put_def)
-
-lemma monad_example3: "fst(run_state (do { put (1, 2); x \<leftarrow> get_fst; return x }) (0, 0)) = 1"
-  by (simp add: get_fst_def put_def get_def return_def)
-
-lemma monad_example4: "fst(run_state (do { put (1, 2); x \<leftarrow> get_snd; return x }) (0, 0)) = 2"
-  by (simp add: get_snd_def put_def get_def return_def)
-
-value "snd(snd((run_state (do { x \<leftarrow> return (3::nat); put_snd x })) (2, 2)))"
-
-lemma monad_example5: "snd(snd((run_state (do { x \<leftarrow> return 1; put_snd x })) (2, 2))) = 1"
-  by (simp add: put_snd_def put_def set_snd_def get_def return_def)
-
-lemma monad_example6: "fst(snd((run_state (do { x \<leftarrow> return 1; put_snd x })) (2, 2))) = 2"
-  by (simp add: put_snd_def put_def set_snd_def get_def return_def)
-
-definition swap:: "(nat pair, unit) state" 
-  where "swap = do { a \<leftarrow> get_fst; b \<leftarrow> get_snd; put_fst b; put_snd a }"
-
-lemma monad_example7: "snd (run_state swap (x,y)) = (y,x)"
-  by (simp add: swap_def put_def get_fst_def get_snd_def put_fst_def put_snd_def set_fst_def set_snd_def get_def return_def)
-
 
 
 end
