@@ -328,16 +328,16 @@ function (domintros) dfs1 and dfs where
       return \<infinity>
     }
   }"
-| "dfs roots = do {
-    if roots = {} then do {return \<infinity>}
+| "dfs roots =
+    (if roots = {} then {return \<infinity>}
     else do {
        let x = (SOME x. x \<in> roots);
        num \<leftarrow> get_num;
-       res1 \<leftarrow> if num x \<noteq> -1 then num x else dfs1 x;
-       res2 \<leftarrow> dfs (roots - {x});
+       res1 \<leftarrow> if (num x) \<noteq> -1 then (num x) else (dfs1 x);
+       let y = roots - {x};
+       res2 \<leftarrow> dfs y;
        return (min res1 res2)
-    }
-  }"
+  })"
   by pat_completeness auto
 
 definition init_env:: "'a env" where
@@ -350,7 +350,7 @@ definition init_state_env:: "('a env, unit) state" where
 
 text\<open>How shoudl this be done instead?\<close>
 definition tarjan where
-  "tarjan \<equiv> run_state (dfs vertices) init_state_env"
+  "tarjan \<equiv> sccs (fst(run_state (dfs vertices) init_state_env))"
 
 subsection \<open>Well-definedness of the functions\<close>
 
@@ -384,23 +384,22 @@ lemma black_increasing:
 
 text\<open>Is this the way to do it?\<close>
 lemma black_increasing_monad:
-"\<lbrakk>\<lbrakk>dfs1_dfs_dom (Inl (x,e)); black e = bl1\<rbrakk>\<rbrakk> \<Longrightarrow> do{
-    run_state (dfs1 x) e;
-    bl2 \<leftarrow> get_black;
-    return (bl1 \<subseteq> bl2)
-  }"
-  "dfs1_dfs_dom (Inr (roots,e)) \<Longrightarrow> do{
-      b1 \<leftarrow> get_black;
-      run_state (dfs roots) e;
-      bl2 \<leftarrow> get_black;
-      return (bl1 \<subseteq> bl2)    
-    }
+"\<lbrakk>dfs1_dfs_dom (Inl (x, e)); black e = bl1; black (snd (run_state (dfs1 x) e)) = bl2 \<rbrakk> \<Longrightarrow> bl1 \<subseteq> bl2"
+"\<lbrakk>dfs1_dfs_dom (Inr (roots, e)); black e = bl1; black (snd (run_state (dfs roots) e)) = bl2 \<rbrakk> \<Longrightarrow> bl1 \<subseteq> bl2"
   sorry
 
 text \<open>
   Similarly, the set of nodes colored black or gray 
   never decreases in the course of the computation.
 \<close>
+
+lemma colored_increasing_monad:
+  "\<lbrakk>dfs1_dfs_dom (Inl (x,e));
+    colored e = c1; colored (snd (run_state(dfs1 x) e)) = c2;
+    colored (snd(run_state (add_stack_incr x) e)) = c3; 
+    colored (snd (run_state(dfs (successors x)) (snd(run_state (add_stack_incr x) e)))) = c4 \<rbrakk> \<Longrightarrow> c1 \<subseteq> c2 \<and> c3 \<subseteq> c4"
+  "\<lbrakk>dfs1_dfs_dom (Inr (roots,e)); colored e = c1; colored (snd (run_state(dfs roots) e)) = c2\<rbrakk> \<Longrightarrow> c1 \<subseteq> c2"
+  sorry
 lemma colored_increasing:
   "dfs1_dfs_dom (Inl (x,e)) \<Longrightarrow>
     colored e \<subseteq> colored (snd (dfs1 x e)) \<and>
@@ -425,6 +424,13 @@ text \<open>
   The functions @{text dfs1} and @{text dfs} never assign the
   number of a vertex to -1.
 \<close>
+lemma dfs_num_defined_monad:
+  "\<lbrakk>dfs1_dfs_dom (Inl (x,e)); num (snd (run_state(dfs1 x) e)) v = -1\<rbrakk> \<Longrightarrow>
+    num e v = -1"
+  "\<lbrakk>dfs1_dfs_dom (Inr (roots,e)); num (snd (run_state(dfs roots) e)) v = -1\<rbrakk> \<Longrightarrow>
+    num e v = -1"
+  sorry
+
 lemma dfs_num_defined:
   "\<lbrakk>dfs1_dfs_dom (Inl (x,e)); num (snd (dfs1 x e)) v = -1\<rbrakk> \<Longrightarrow>
     num e v = -1"
@@ -445,9 +451,9 @@ definition colored_num where
 
 lemma colored_num:
   "\<lbrakk>dfs1_dfs_dom (Inl (x,e)); x \<in> vertices; colored_num e\<rbrakk> \<Longrightarrow>
-    colored_num (snd (dfs1 x e))"
+    colored_num (snd (run_state(dfs1 x) e))"
   "\<lbrakk>dfs1_dfs_dom (Inr (roots,e)); roots \<subseteq> vertices; colored_num e\<rbrakk> \<Longrightarrow>
-    colored_num (snd (dfs roots e))"
+    colored_num (snd (run_state(dfs roots) e))"
 proof (induct rule: dfs1_dfs.pinduct)
   case (1 x e) 
   let ?rec = "dfs (successors x) (add_stack_incr x e)"

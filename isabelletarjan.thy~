@@ -82,7 +82,6 @@ definition set_num:: "'a env \<Rightarrow> ('a \<Rightarrow> int) \<Rightarrow> 
              sn = sn v,
              num = x \<rparr>"
 
-
 definition put_black:: "'a set \<Rightarrow> ('a env, unit) state" where "put_black x = do { v \<leftarrow> get; put (set_black v x) }"
 definition put_gray:: "'a set \<Rightarrow> ('a env, unit) state" where "put_gray x = do { v \<leftarrow> get; put (set_gray v x) }"
 definition put_stack:: "'a list \<Rightarrow> ('a env, unit) state" where "put_stack x = do { v \<leftarrow> get; put (set_stack v x) }"
@@ -91,9 +90,6 @@ definition put_sn:: "nat \<Rightarrow> ('a env, unit) state" where "put_sn x = d
 definition put_num:: "('a \<Rightarrow> int) \<Rightarrow> ('a env, unit) state" where "put_num x = do { v \<leftarrow> get; put (set_num v x) }"
 
 definition skip:: "('a env, unit) state" where "skip = State (\<lambda>x. ((),x))"
-
-
-
 
 definition colored where
   "colored e \<equiv> black e \<union> gray e"
@@ -253,7 +249,7 @@ definition insert_gray:: "'v \<Rightarrow> ('v env, unit) state" where
     }"
 
 definition insert_stack:: "'v  \<Rightarrow> ('v env, unit) state" where
-"insert_stack x \<equiv> do{
+"insert_stack x \<equiv> do {
        st \<leftarrow> get_stack;
        st \<leftarrow> return (x # st);
        put_stack st
@@ -265,23 +261,21 @@ definition count_up_sn:: "('v env, unit) state" where
       put_sn (sn + 1)
 }"
 
-text\<open>Ask Stefan and look into this\<close>
 definition update_num:: "'v \<Rightarrow> ('v env, unit) state" where
 "update_num x \<equiv> do {
       num \<leftarrow> get_num;
       sn \<leftarrow> get_sn;
-      num \<leftarrow> return (x := sn);
+      num \<leftarrow> return (num (x := int(sn)));
       put_num num
 }"
 
-(*Add this update_num x
-*)
 definition add_stack_incr:: "'v \<Rightarrow> ('v env, unit) state" where
-  "add_stack_incr x = do {
-      insert_gray x;
-      insert_stack x;
-      count_up_sn
-    }"
+"add_stack_incr x = do {
+    insert_gray x;
+    insert_stack x;
+    count_up_sn;
+    update_num x
+  }"
 
 text \<open>
   Add vertex @{text x} to the set of black vertices in @{text e}
@@ -310,35 +304,40 @@ text {*
   function operating on a set of vertices.
 *}
 
-
 text\<open>Look into problems here!\<close>
+text\<open>dfs is not change the state of the program (The state_monad). 
+    It is only dfs1 that are change the state of the program\<close>
 function (domintros) dfs1 and dfs where
   "dfs1 x = do {
     add_stack_incr x;
-    n1 \<leftarrow> dfs (successors x);
+    let n1 = dfs (successors x);
     sn \<leftarrow> get_sn;
-    if n1 < int (sn) then do{
+    if n1 < int sn then do{
       add_black x;
-      return n1}
+      return n1
+    }
     else do{
       st \<leftarrow> get_stack;
       insert_black x;
-      put_stack (snd(split_list x st));
-      insert_sccs (fst(split_list x st));
-     return \<infinity>
+      let (l,r) = split_list x st;
+      insert_sccs l;
+      put_stack r;
+      num \<leftarrow> get_num;
+      num \<leftarrow> set_infty l num;
+      put_num num;
+      return \<infinity>
     }
   }"
-| "dfs roots = do {
-    if roots = {} then do{return \<infinity>}
-    else do{
-       x \<leftarrow> SOME x. x \<in> roots;
+| "dfs roots =
+    (if roots = {} then {return \<infinity>}
+    else do {
+       let x = (SOME x. x \<in> roots);
        num \<leftarrow> get_num;
-       res1 \<leftarrow> (if num x \<noteq> -1 then num x else dfs1 x);
-       roots \<leftarrow> roots - {x};
-       res2 \<leftarrow> dfs roots;
-      return (min res1 res2)
-    }
-  }"
+       res1 \<leftarrow> if (num x) \<noteq> -1 then (num x) else (dfs1 x);
+       let y = roots - {x};
+       res2 \<leftarrow> dfs y;
+       return (min res1 res2)
+  })"
   by pat_completeness auto
 
 definition init_env:: "'a env" where
@@ -349,8 +348,9 @@ definition init_env:: "'a env" where
 definition init_state_env:: "('a env, unit) state" where
   "init_state_env \<equiv> State (\<lambda>x. ((),init_env))"
 
+text\<open>How shoudl this be done instead?\<close>
 definition tarjan where
-  "tarjan \<equiv> run_state dfs vertices init_state_env"
+  "tarjan \<equiv> sccs (fst(run_state (dfs vertices) init_state_env))"
 
 subsection \<open>Well-definedness of the functions\<close>
 
@@ -382,10 +382,24 @@ lemma black_increasing:
       (fastforce simp: dfs1.psimps dfs.psimps case_prod_beta 
                    add_black_def add_stack_incr_def)+)
 
+text\<open>Is this the way to do it?\<close>
+lemma black_increasing_monad:
+"\<lbrakk>dfs1_dfs_dom (Inl (x, e)); black e = bl1; black (snd (run_state (dfs1 x) e)) = bl2 \<rbrakk> \<Longrightarrow> bl1 \<subseteq> bl2"
+"\<lbrakk>dfs1_dfs_dom (Inr (roots, e)); black e = bl1; black (snd (run_state (dfs roots) e)) = bl2 \<rbrakk> \<Longrightarrow> bl1 \<subseteq> bl2"
+  sorry
+
 text \<open>
   Similarly, the set of nodes colored black or gray 
   never decreases in the course of the computation.
 \<close>
+
+lemma colored_increasing_monad:
+  "\<lbrakk>dfs1_dfs_dom (Inl (x,e));
+    colored e = c1; colored (snd (run_state(dfs1 x) e)) = c2;
+    colored (snd(run_state (add_stack_incr x) e)) = c3; 
+    colored (snd (run_state(dfs (successors x)) (snd(run_state (add_stack_incr x) e)))) = c4 \<rbrakk> \<Longrightarrow> c1 \<subseteq> c2 \<and> c3 \<subseteq> c4"
+  "\<lbrakk>dfs1_dfs_dom (Inr (roots,e)); colored e = c1; colored (snd (run_state(dfs roots) e)) = c2\<rbrakk> \<Longrightarrow> c1 \<subseteq> c2"
+  sorry
 lemma colored_increasing:
   "dfs1_dfs_dom (Inl (x,e)) \<Longrightarrow>
     colored e \<subseteq> colored (snd (dfs1 x e)) \<and>
@@ -410,6 +424,12 @@ text \<open>
   The functions @{text dfs1} and @{text dfs} never assign the
   number of a vertex to -1.
 \<close>
+lemma dfs_num_defined_monad:
+  "\<lbrakk>dfs1_dfs_dom (Inl (x,e)); num (snd (run_state(dfs1 x) e)) v = -1\<rbrakk> \<Longrightarrow>
+    num e v = -1"
+  "\<lbrakk>dfs1_dfs_dom (Inr (roots,e)); num (snd (run_state(dfs roots) e)) v = -1\<rbrakk> \<Longrightarrow>
+    num e v = -1"
+
 lemma dfs_num_defined:
   "\<lbrakk>dfs1_dfs_dom (Inl (x,e)); num (snd (dfs1 x e)) v = -1\<rbrakk> \<Longrightarrow>
     num e v = -1"
