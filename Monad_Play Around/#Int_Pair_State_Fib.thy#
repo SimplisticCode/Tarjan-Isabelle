@@ -41,6 +41,16 @@ lemma [simp]: "(fib n)*(fib (Suc (Suc n))) \<le> (fib (Suc n)) * (fib (Suc n)) +
   by (smt add_Suc add_mult_distrib2 eq_iff le_Suc_eq)
 
 
+lemma fibacc_gre[simp]: "fibacc n 0 1 \<le> fibacc (Suc n) 0 1"
+proof(induction n)
+  case 0
+  then show ?case by simp
+next
+  case (Suc n)
+  then show ?case
+    sorry
+qed
+
 lemma [simp]: "fibacc (Suc n) 0 1 > 0"
   proof (induction n)
     case 0
@@ -48,15 +58,25 @@ lemma [simp]: "fibacc (Suc n) 0 1 > 0"
   next
     case (Suc n)
     fix n
-    assume "fibacc n 0 1 > 0"
-    also assume "fibacc (Suc n) 0 1 \<ge> fibacc n 0 1"
-    from this and `fibacc n 0 1 > 0` have  "fibacc (Suc n) 0 1 > 0"
-    proof -
-      show "0 < fibacc (Suc n) 0 1"
-        using \<open>0 < fibacc n 0 1\<close> \<open>fibacc n 0 1 \<le> fibacc (Suc n) 0 1\<close> by linarith
-    next
+    assume "fibacc (Suc n) 0 1 > 0"
+    from this have "fibacc (Suc(Suc n)) 0 1 \<ge> fibacc (Suc n) 0 1"
+      using fibacc_gre by blast 
+      show "0 < fibacc (Suc(Suc n)) 0 1"
+        using \<open>0 < fibacc (Suc n) 0 1\<close> and \<open> fibacc (Suc (Suc n)) 0 1  \<ge> fibacc (Suc n) 0 1\<close>  by force
     qed
-  qed
+  
+
+lemma [simp]: "fib (Suc n) > 0"
+proof(induction n)
+  case 0
+  then show ?case by simp
+next
+  case (Suc n)
+  fix n assume "fib n > 0"
+  then show ?case
+    by (simp add: Suc.IH)
+qed
+
 
 lemma [simp]: "fib (Suc n) > 0"
   by (induct n rule: fib.induct) simp_all
