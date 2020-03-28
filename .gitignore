@@ -1,0 +1,5 @@
+*.thy#
+*.thy~	
+extern/*
+output/*
+example/rewrite_example.sml

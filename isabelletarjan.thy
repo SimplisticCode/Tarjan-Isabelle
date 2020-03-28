@@ -324,20 +324,22 @@ function (domintros) dfs1 and dfs where
       put_stack r;
       num \<leftarrow> get_num;
       num \<leftarrow> set_infty l num;
-      put_num num;
+      put_num num;  
       return \<infinity>
     }
   }"
-| "dfs roots =
-    (if roots = {} then {return \<infinity>}
+| "dfs roots = do{
+    a \<leftarrow> (if roots = {} then (\<infinity>)
     else do {
-       let x = (SOME x. x \<in> roots);
+       x \<leftarrow> (SOME x. x \<in> roots);
        num \<leftarrow> get_num;
-       res1 \<leftarrow> if (num x) \<noteq> -1 then (num x) else (dfs1 x);
+       let res1 = (if (num x \<noteq> -1) then (num x) else (dfs1 x));
        let y = roots - {x};
-       res2 \<leftarrow> dfs y;
-       return (min res1 res2)
-  })"
+       let res2 =  dfs y;
+       (min res1 res2)
+    });
+    return a
+  }"
   by pat_completeness auto
 
 definition init_env:: "'a env" where
