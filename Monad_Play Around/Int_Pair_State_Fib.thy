@@ -33,8 +33,6 @@ fun fib :: "nat => nat" where
 
 value "fib (Suc (Suc 6)) "
 
-lemma[simp]: "fibacc (Suc(Suc n)) 0 1 = fib n + fib (Suc n)"
-
   
 value \<open>fibacc 6 0 1 = 8\<close>
 value \<open>fibacc 9 0 1 = 34\<close>
@@ -50,52 +48,28 @@ value \<open>fibacc 5 0 (fibacc 5 0 1)\<close>
 value \<open>fibacc 5 (fib 1) (fib 2)\<close>
 value\<open>fib 7\<close>
 
-lemma fib_aux[simp]: "fibacc n (fib (Suc 0)) (fib (Suc (Suc 0))) = fibacc (Suc n) 0 1"
-proof(induct n rule: nat.induct)
-  case zero
-  then show ?case by simp
-next
-  case (Suc nat)
-  then show ?case by simp
-qed
+lemma fib_aux: "fibacc n b (a + b) = fibacc (Suc n) a b"
+  apply(induction n)
+   apply(simp_all)
+  done
 
-lemma fib_help[simp]: "fibacc n (fib (Suc n)) (fib (Suc (Suc n))) = fibacc (Suc n) (fib n) (fib (Suc n))"
-proof(induct n rule: nat.induct)
-  case zero
-  then show ?case by simp
-next
-  case (Suc nat)
-  then show ?case by simp
-qed
-
-lemma fib1[simp]: "fibacc (Suc (Suc (Suc n))) 0 1 = fibacc (Suc (Suc n)) (fib (Suc 0)) (fib (Suc 1))"
-proof(induct n rule: nat.induct)
-  case zero
-then show ?case by simp
-next
-  case (Suc nat)
-  then show ?case by simp
-qed
-
-lemma fib_aux1[simp]: "fibacc (Suc n) (fib (Suc 0)) (fib (Suc (Suc 0))) = fibacc (Suc (Suc n)) 0 1"
-proof(induct n rule: nat.induct)
-  case zero
-  then show ?case by simp
+lemma fib_aux1: "fibacc (Suc (Suc n)) a b = fibacc n a b + fibacc (Suc n) a b"
+proof(induct n arbitrary: a b)
+  case 0
+  then show ?case by simp_all
 next
   case (Suc nat)
   then show ?case
-    using fib_aux by blast
+    using fib_aux by simp_all
 qed
 
-lemma fib_aux2[simp]: "fibacc (Suc (Suc n)) (fib (Suc 0)) (fib (Suc (Suc 0))) = fibacc (Suc (Suc (Suc n))) 0 1"
-proof(induct n rule: nat.induct)
-  case zero
-  then show ?case by simp
-next
-  case (Suc nat)
-  then show ?case
-    using fib_aux by blast
-qed
+lemma fib_main1: "fib n = fibacc n 0 1"
+  apply(induction n rule: fib.induct)
+    apply(simp)
+    apply(simp)
+    apply (simp only: fib_aux1)
+  by (simp)
+
 
 lemma fib_aux3[simp]: "fibacc (Suc n) 0 1 = fibacc n (fibacc (Suc 0) 0 1) (fibacc (Suc (Suc 0)) 0 1)"
 proof(induct n rule: nat.induct)
@@ -115,82 +89,6 @@ next
   then show ?case by simp
 qed
 
-text\<open>Stefan - I have some problems here. I need this lemma in order to prove my main lemma\<close>
-lemma fibacc1[simp]: "fibacc n 0 1 + fibacc (Suc n) 0 1 = fibacc (Suc (Suc n)) 0 1"
-proof(induct n rule: nat.induct)
-  case zero
-  then show ?case by simp
-next
-  case (Suc nat)
-  fix n
-  assume "fibacc n 0 1 + fibacc (Suc n) 0 1 = fibacc (Suc (Suc n)) 0 1"
-  have "fibacc n (fib (Suc 0)) (fib (Suc (Suc 0))) = fibacc (Suc n) 0 1" using fib_aux by blast
-  from this have "fibacc n 0 1 + fibacc n (fib (Suc 0)) (fib (Suc (Suc 0))) = fibacc (Suc (Suc n)) 0 1"
-    using \<open>fibacc n 0 1 + fibacc (Suc n) 0 1 = fibacc (Suc (Suc n)) 0 1\<close> by simp
-  from this have "fibacc (Suc (Suc (Suc n))) 0 1 = fibacc (Suc (Suc n)) (fib (Suc 0)) (fib (Suc (Suc 0)))" by simp
-  from this have "fibacc (Suc (Suc n)) (fib (Suc 0)) (fib (Suc (Suc 0))) = fibacc (Suc n) (fib (Suc(Suc 0))) (fib (Suc(Suc(Suc 0))))" by simp
-  from this have "fibacc (Suc n) (fib (Suc(Suc 0))) (fib (Suc(Suc(Suc 0)))) = fibacc n (fib (Suc(Suc(Suc 0)))) (fib (Suc(Suc(Suc(Suc 0)))))"
-    by (smt Int_Pair_State_Fib.fa2 Int_Pair_State_Fib.fa3 fib.simps(3) fibacc.elims)
-  from this have "fibacc (Suc (Suc n)) a b + fibacc (Suc n) a b = fibacc (Suc n) a b + fibacc (Suc (Suc (Suc n))) a b" by simp
-  from this have "fibacc (Suc (Suc n)) a b = fibacc (Suc (Suc (Suc n))) a b" by simp
-  then show ?case 
-qed sorry
-
-text\<open>The main lemma\<close>
-lemma fib_main: "fibacc n 0 1 = fib n"
-proof (induct n rule: fib.induct)
-  case 1
-  then show ?case by simp
-next
-  case 2
-  then show ?case by simp
-next
-  case (3 x)
-  have 1:"fibacc (Suc (Suc x)) 0 1 = fibacc (Suc x) 0 1 + fibacc x 0 1" by simp 
-  \<comment> I think the above step should be valid?
-  from this have 2:"
-text\<open>Stefan - I have some problems here. I need this lemma in order to prove my main lemma\<close>
-lemma fibacc1[simp]: "fibacc n 0 1 + fibacc (Suc n) 0 1 = fibacc (Suc (Suc n)) 0 1"
-proof(induct n rule: nat.induct)
-  case zero
-  then show ?case by simp
-next
-  case (Suc nat)
-  fix n
-  assume "fibacc n 0 1 + fibacc (Suc n) 0 1 = fibacc (Suc (Suc n)) 0 1"
-  have "fibacc n (fib (Suc 0)) (fib (Suc (Suc 0))) = fibacc (Suc n) 0 1" using fib_aux by blast
-  from this have "fibacc n 0 1 + fibacc n (fib (Suc 0)) (fib (Suc (Suc 0))) = fibacc (Suc (Suc n)) 0 1"
-    using \<open>fibacc n 0 1 + fibacc (Suc n) 0 1 = fibacc (Suc (Suc n)) 0 1\<close> by simp
-  from this have "fibacc (Suc (Suc (Suc n))) 0 1 = fibacc (Suc (Suc n)) (fib (Suc 0)) (fib (Suc (Suc 0)))" by simp
-  from this have "fibacc (Suc (Suc n)) (fib (Suc 0)) (fib (Suc (Suc 0))) = fibacc (Suc n) (fib (Suc(Suc 0))) (fib (Suc(Suc(Suc 0))))" by simp
-  from this have "fibacc (Suc n) (fib (Suc(Suc 0))) (fib (Suc(Suc(Suc 0)))) = fibacc n (fib (Suc(Suc(Suc 0)))) (fib (Suc(Suc(Suc(Suc 0)))))"
-    by (smt Int_Pair_State_Fib.fa2 Int_Pair_State_Fib.fa3 fib.simps(3) fibacc.elims)
-  from this have "fibacc (Suc (Suc n)) a b + fibacc (Suc n) a b = fibacc (Suc n) a b + fibacc (Suc (Suc (Suc n))) a b" by simp
-  from this have "fibacc (Suc (Suc n)) a b = fibacc (Suc (Suc (Suc n))) a b" by simp
-  then show ?case 
-qed sorry
-
-text\<open>The main lemma\<close>
-lemma fib_main: "fibacc n 0 1 = fib n"
-proof (induct n rule: fib.induct)
-  case 1
-  then show ?case by simp
-next
-  case 2
-  then show ?case by simp
-next
-  case (3 x)
-  have 1:"fibacc (Suc (Suc x)) 0 1 = fibacc (Suc x) 0 1 + fibacc x 0 1" by simp 
-  \<comment> I think the above step should be valid?
-  from this have 2:" fib (Suc (Suc x))  = fib (Suc x) + fib x" by simp
-  then show ?case
-    using "1" "3.hyps"(1) "3.hyps"(2) by auto
-qed 
- fib (Suc (Suc x))  = fib (Suc x) + fib x" by simp
-  then show ?case
-    using "1" "3.hyps"(1) "3.hyps"(2) by auto
-qed 
-
 lemma fib_gre[simp]: "fib n \<le> fib (Suc n)"
 proof(induction n rule: fib.induct)
   case 1
@@ -203,34 +101,9 @@ next
   then show ?case by simp
 qed
 
-lemma fibacc_gre[simp]: "fibacc n a b \<le> fibacc (Suc n) a b"
-proof(induct n arbitrary: a b rule: fibacc.induct)
-  case (1 a b)
-  fix n 
-  then show ?case sledgehammer
-next
-  case (2 a b)
-  then show ?case s
-next
-  case (3 n a b)
-  then show ?case sorry
-qed
-
-lemma: "fibacc (Suc(Suc 0)) (fib n) (fib (Suc n)) = fibacc (Suc (Suc (Suc(Suc n)))) 0 1"
-proof(induct n rule: fibacc.induct)
-case (1 a b)
-then show ?case by simp
-next
-  case (2 a b)
-  then show ?case sorry
-next
-  case (3 n a b)
-then show ?case sorry
-qed
-
-
-
-
+lemma fibacc_gre[simp]: "\<forall> (a::nat) (b::nat). a \<le> b \<Longrightarrow> fibacc n a b \<le> fibacc (Suc n) a b"
+  apply(induction n)
+   apply (simp_all)
 
 primrec pow :: "nat => nat => nat" where 
     "pow x 0 = Suc 0"
@@ -244,30 +117,10 @@ proof (induction x)
 *)
 
 lemma [simp]: "fibacc (Suc n) 0 1 > 0"
-  proof (induction n rule: fibacc.induct)
-    case (1 a b)
-    assume "a = 0" 
-    also assume "b = 1"
-    then show ?case by simp
-  next
-    case (2 a b)
-    assume "a = 0 \<and> b = 1" 
-    then show ?case sorry
-  next
-    case (3 n a b)
-    then show ?case sorry
-  qed
-    case 0
-    then show ?case by simp
-  next
-    case (Suc n)
-    fix n
-    assume "fibacc (Suc n) 0 1 > 0"
-    from this have "fibacc (Suc(Suc n)) 0 1 \<ge> fibacc (Suc n) 0 1"
-      using fibacc_gre by blast 
-      show "0 < fibacc (Suc(Suc n)) 0 1"
-        using \<open>0 < fibacc (Suc n) 0 1\<close> and \<open> fibacc (Suc (Suc n)) 0 1  \<ge> fibacc (Suc n) 0 1\<close>  by simp
-    qed
+  apply (induction n rule: nat.induct)
+   apply(simp_all)
+  sledgehammer
+
   
 
 lemma [simp]: "fib (Suc n) > 0"
