@@ -11,57 +11,101 @@ definition skip:: "(nat, unit) state" where "skip = State (\<lambda>x. ((),x))"
 
 fun fibacc :: "nat \<Rightarrow> nat => nat \<Rightarrow> nat" where
 fa1: "fibacc 0 a b = a"| 
-fa2: "fibacc (Suc 0) a b = b"| 
+fa2: "fibacc (Suc 0) a b = b"|
 fa3: "fibacc (Suc (Suc n)) a b = fibacc (Suc n) b (a+b)"
 
 definition fib_wrap:: "nat \<Rightarrow> nat" where
-  "fib_wrap n \<equiv> fibacc n 1 1"
+"fib_wrap n = fibacc n 0 1"
+
+fun fib :: "nat => nat" where
+  "fib 0 = 0"
+| "fib (Suc 0) = 1"
+| "fib (Suc (Suc x)) = fib x + fib (Suc x)"
 
 fun monfibacc :: "nat \<Rightarrow> nat => (nat, unit) state" where
-m1:  "monfibacc 0 a = skip"| 
-m2:  "monfibacc (Suc n) a  = do{b \<leftarrow> get; put (a + b); monfibacc n b}"
+m1:  "monfibacc 0 a =  do{put a}"| 
+m2:  "monfibacc (Suc 0) a = do{b \<leftarrow> get; put b}"| 
+m3:  "monfibacc (Suc n) a  = do{b \<leftarrow> get; new_b \<leftarrow> return (a + b); put new_b; monfibacc n b}"
 
-definition monfib_wrap where
-  "monfib_wrap n \<equiv> (monfibacc n 1)"
 
-value \<open>fibacc 9 1 1 = 55\<close>
-value \<open>snd (run_state (monfibacc 9 0) (1::nat)) = 55\<close>
-value \<open>fib_wrap 9 = 55\<close>
+value \<open>fibacc 10 0 1 = 55\<close>
+value \<open>fib 5\<close>
+value "snd (run_state (monfibacc 5 0) (1::nat))"
+value \<open>snd (run_state (monfibacc 10 0) (1::nat)) = 55\<close>
+value \<open>fib 10 = 55\<close>
 value \<open>snd (run_state (monfib_wrap 9) (1::nat))\<close>
 value \<open>snd (run_state (monfib_wrap 2) (0::nat))\<close>
 value \<open>snd (run_state (monfib_wrap 0) (snd (run_state (monfib_wrap 7) 1)))\<close>
 value \<open>snd (run_state (monfib_wrap 7) 1)\<close>
 
-lemma fib_base[simp]: "snd (run_state (monfib_wrap 0) (Suc 0)) = fib_wrap 0"
-  by (simp add: fib_wrap_def monfib_wrap_def put_def skip_def)
-
-lemma fib_wrap_aux[simp]: "fib_wrap (Suc (Suc n)) = fib_wrap n + fib_wrap (Suc n)"
-  apply (induction n)
-   apply (simp add: fib_wrap_def)
-  sledgehammer
-  using Int_State_Monad.fa3 fib_wrap_def
-  sorry
-
-
-lemma monfib_aux[simp]: "snd (run_state (monfib_wrap (Suc (Suc n))) x) 
-        = snd (run_state (monfib_wrap (Suc n)) x) + snd (run_state (monfib_wrap n) x)"
-  apply (induction n arbitrary: x)
+lemma fib_aux: "fibacc n b (a + b) = fibacc (Suc n) a b"
+  apply(induction n)
    apply(simp_all)
+  done
 
-  sorry
+lemma fib_aux1: "fibacc (Suc (Suc n)) a b = fibacc n a b + fibacc (Suc n) a b"
+proof(induct n arbitrary: a b)
+  case 0
+  then show ?case by simp_all
+next
+  case (Suc nat)
+  then show ?case
+    using fib_aux by simp
+qed
 
-lemma monfib_aux[simp]: "snd (run_state (monfib_wrap (Suc (Suc n))) x) 
-        = snd (run_state (monfib_wrap (Suc n)) (snd (run_state (monfib_wrap n) x)))"
-  apply (induction n arbitrary: x)
-  sledgehammer
-   apply (simp add: put_def snd_def get_def skip_def)
-  sledgehammer
-  sorry
+lemma fib_main1: "fib n = fibacc n 0 1"
+  apply(induction n rule: fib.induct)
+    apply(simp)
+    apply(simp)
+    apply (simp only: fib_aux1)
+  by (simp)
 
-lemma fib_basic: "snd (run_state (monfib_wrap n) 1) = fib_wrap n"
-  apply (induction n)
-   apply (simp)
-  sorry
+lemma fibwrap_main: "fib_wrap n = fibacc n 0 1"
+  apply(induction n rule: nat.induct)
+   apply(simp_all add: fib_wrap_def)
+  done
+
+lemma fib_main: "fib_wrap n = fib n"
+  apply(induction n rule: nat.induct)
+    apply(simp_all add: fib_main1 fibwrap_main)
+  done
+
+lemma monfib_aux: "snd (run_state(monfibacc n b) (a + b)) = snd (run_state(monfibacc (Suc n) a) (b))"
+  apply (induction n arbitrary: a b rule:nat.induct)
+   apply (simp_all add: snd_def put_def get_def return_def)
+  done
+
+value\<open>snd (run_state(monfibacc 7 0) 1) + snd (run_state(monfibacc (Suc 7) 0) 1) =snd (run_state(monfibacc (Suc (Suc 7)) 0) 1)\<close>
+
+lemma monfib_aux1: "snd (run_state(monfibacc (Suc (Suc n)) a) b) = snd (run_state(monfibacc n a) b) + snd (run_state(monfibacc (Suc n) a) b)"
+proof(induct n arbitrary: a b)
+  case 0
+  then show ?case by(simp add: snd_def put_def get_def return_def)
+next
+  case (Suc nat)
+  then show ?case
+    using monfib_aux by (simp add: snd_def put_def get_def return_def)
+qed
+
+lemma fib_m_main: "snd (run_state (monfibacc n 0) 1) = fib n"
+  apply (induction n rule:fib.induct)
+    apply(simp add: snd_def put_def get_def return_def)
+    apply(simp add: snd_def put_def get_def return_def)
+    apply(simp only: monfib_aux1)
+  apply(simp)
+  done
+
+
+lemma fib_mon_main: "snd (run_state (monfibacc n a) (b+a)) = fibacc n a (b+a)"
+  apply (induction n rule:nat.induct)
+    apply(simp add: snd_def put_def get_def return_def)
+    apply(simp add: snd_def put_def get_def return_def)
+
+
+lemma fib_mon_main: "snd (run_state (monfibacc n a) b) = fibacc n a b"
+  apply (induction n rule:nat.induct)
+   apply(simp add: snd_def put_def get_def return_def)
+  try0
 
 
 end

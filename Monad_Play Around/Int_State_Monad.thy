@@ -103,19 +103,8 @@ value \<open>snd (run_state (monfib_wrap (Suc (Suc 0))) 1)\<close>
 lemma fib_base[simp]: "snd (run_state (monfib_wrap 0) (Suc 0)) = fib_wrap 0"
   by (simp add: fib_wrap_def monfib_wrap_def put_def skip_def)
 
-lemma fib_wrap_aux[simp]: "fib_wrap (Suc (Suc n)) = fib_wrap n + fib_wrap (Suc n)"
-  apply (induction n)
-   apply (simp add: fib_wrap_def)
-  using Int_State_Monad.fa3  fib_wrap_def
-  sorry
 
-lemma monfib_aux[simp]: "snd (run_state (monfib_wrap (Suc (Suc n))) x) 
-        = snd (run_state (monfib_wrap (Suc n)) (snd (run_state (monfib_wrap n) x)))"
-  apply (induction n arbitrary: x)
-  sledgehammer
-   apply (simp add: put_def snd_def get_def skip_def)
-  sledgehammer
-  sorry
+
 
 lemma fib_basic: "snd (run_state (monfib_wrap n) 1) = fib_wrap n"
   apply (induction n)

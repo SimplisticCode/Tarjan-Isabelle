@@ -60,7 +60,7 @@ proof(induct n arbitrary: a b)
 next
   case (Suc nat)
   then show ?case
-    using fib_aux by simp_all
+    using fib_aux by simp
 qed
 
 lemma fib_main1: "fib n = fibacc n 0 1"
@@ -70,24 +70,24 @@ lemma fib_main1: "fib n = fibacc n 0 1"
     apply (simp only: fib_aux1)
   by (simp)
 
+lemma fibwrap_main: "fib_wrap n = fibacc n 0 1"
+  apply(induction n rule: nat.induct)
+   apply(simp_all add: fib_wrap_def)
+  done
+
+lemma fib_main: "fib_wrap n = fib n"
+  apply(induction n rule: fib.induct)
+   apply(simp_all add: fib_main1 fibwrap_main)
 
 lemma fib_aux3[simp]: "fibacc (Suc n) 0 1 = fibacc n (fibacc (Suc 0) 0 1) (fibacc (Suc (Suc 0)) 0 1)"
-proof(induct n rule: nat.induct)
-  case zero
-  then show ?case by simp
-next
-  case (Suc nat)
-  then show ?case by simp
-qed
+  apply(induct n rule: nat.induct)
+   apply(simp_all)
+
 
 lemma fib_aux4[simp]: "fibacc  n (fib (Suc 0)) (fib (Suc (Suc 0))) = fibacc n (fibacc (Suc 0) 0 1) (fibacc (Suc (Suc 0)) 0 1)"
-proof(induct n rule: nat.induct)
-  case zero
-  then show ?case by simp
-next
-  case (Suc nat)
-  then show ?case by simp
-qed
+  apply(induct n rule: nat.induct)
+  apply(simp_all)
+
 
 lemma fib_gre[simp]: "fib n \<le> fib (Suc n)"
 proof(induction n rule: fib.induct)
@@ -119,7 +119,6 @@ proof (induction x)
 lemma [simp]: "fibacc (Suc n) 0 1 > 0"
   apply (induction n rule: nat.induct)
    apply(simp_all)
-  sledgehammer
 
   
 
@@ -144,12 +143,12 @@ theorem fib_induct:
     "P 0 ==> P 1 ==> (\<And>n. P (n + 1) ==> P n ==> P (n + 2)) ==> P (n::nat)"
   by (induct rule: fib.induct) simp_all
 
-
 text\<open>The fibonacci function does always return the result at the fst value of the pair. The initial state passed in should be (0,1)\<close>
 fun monfib:: "nat \<Rightarrow> (nat pair, unit) state" where
   "monfib 0 = skip" |
   "monfib (Suc 0) = do {a \<leftarrow> get_snd; put_fst a}" |
   "monfib (Suc (Suc n)) = do { a \<leftarrow> get_fst; b \<leftarrow> get_snd; temp_b \<leftarrow> return b; b \<leftarrow> return (a + b); put (temp_b,b); monfib (Suc n)}"
+
 
 value \<open>fst(snd(run_state (monfib 5) (0::nat,x::nat)))\<close>
 value "fst(snd (run_state (monfib 6) x))"
@@ -178,7 +177,13 @@ qed
 
 value "fst(snd (run_state (monfib (Suc (Suc 4))) x)) = fst(snd (run_state (monfib 4) x)) + fst(snd (run_state (monfib (Suc 4)) x))"
 
-lemma monfib_aux: "fst(snd (run_state (monfib (Suc (Suc n))) x)) = fst(snd (run_state (monfib n) x)) + fst(snd (run_state (monfib (Suc n)) x))"
+lemma monfib_aux: "fst(snd (run_state (monfib n) (b, (a + b)))) = fst(snd (run_state (monfib (Suc n)) (a, b)))"
+  apply(induction n rule: nat.induct)
+   apply(simp add: skip_def get_snd_def)
+  done
+
+
+lemma monfib_aux1: "fst(snd (run_state (monfib (Suc (Suc n))) x)) = fst(snd (run_state (monfib n) x)) + fst(snd (run_state (monfib (Suc n)) x))"
 proof (induction n)
   case 0
   then show ?case sorry
@@ -188,15 +193,9 @@ next
 qed
 
 
-lemma fib_aux: "fibacc n (fst x) (snd x) + fibacc (Suc n) (fst x) (snd x) = fibacc (Suc(Suc n)) (fst x) (snd x)"
-  apply(induction n arbitrary: x)
-   apply simp
-  sledgehammer
-
-
 
 lemma fib_basic: "fst(snd(run_state (monfib n) x)) = fibacc n ((fst x)::nat) ((snd x)::nat)"
-  apply (induction n arbitrary: x)
+  apply (induction n arbitrary: x rule:nat.induct)
    apply (simp add:  skip_def)
   sorry
 
