@@ -27,7 +27,6 @@ m1:  "monfibacc 0 a =  do{put a}"|
 m2:  "monfibacc (Suc 0) a = do{b \<leftarrow> get; put b}"| 
 m3:  "monfibacc (Suc n) a  = do{b \<leftarrow> get; new_b \<leftarrow> return (a + b); put new_b; monfibacc n b}"
 
-
 value \<open>fibacc 10 0 1 = 55\<close>
 value \<open>fib 5\<close>
 value "snd (run_state (monfibacc 5 0) (1::nat))"
@@ -44,14 +43,16 @@ lemma fib_aux: "fibacc n b (a + b) = fibacc (Suc n) a b"
   done
 
 lemma fib_aux1: "fibacc (Suc (Suc n)) a b = fibacc n a b + fibacc (Suc n) a b"
-proof(induct n arbitrary: a b)
-  case 0
-  then show ?case by simp_all
-next
-  case (Suc nat)
-  then show ?case
-    using fib_aux by simp
-qed
+  apply(induction n arbitrary: a b)
+   apply(simp)
+    apply(simp)
+    apply (simp only: fib_aux)
+  done
+
+lemma fibwrap_main: "fib_wrap n = fibacc n 0 1"
+  apply(induction n rule: nat.induct)
+   apply(simp_all add: fib_wrap_def)
+  done
 
 lemma fib_main1: "fib n = fibacc n 0 1"
   apply(induction n rule: fib.induct)
@@ -60,10 +61,6 @@ lemma fib_main1: "fib n = fibacc n 0 1"
     apply (simp only: fib_aux1)
   by (simp)
 
-lemma fibwrap_main: "fib_wrap n = fibacc n 0 1"
-  apply(induction n rule: nat.induct)
-   apply(simp_all add: fib_wrap_def)
-  done
 
 lemma fib_main: "fib_wrap n = fib n"
   apply(induction n rule: nat.induct)
@@ -71,21 +68,20 @@ lemma fib_main: "fib_wrap n = fib n"
   done
 
 lemma monfib_aux: "snd (run_state(monfibacc n b) (a + b)) = snd (run_state(monfibacc (Suc n) a) (b))"
-  apply (induction n arbitrary: a b rule:nat.induct)
+  apply (induction n arbitrary: a b rule: nat.induct)
    apply (simp_all add: snd_def put_def get_def return_def)
   done
 
 value\<open>snd (run_state(monfibacc 7 0) 1) + snd (run_state(monfibacc (Suc 7) 0) 1) =snd (run_state(monfibacc (Suc (Suc 7)) 0) 1)\<close>
 
 lemma monfib_aux1: "snd (run_state(monfibacc (Suc (Suc n)) a) b) = snd (run_state(monfibacc n a) b) + snd (run_state(monfibacc (Suc n) a) b)"
-proof(induct n arbitrary: a b)
-  case 0
-  then show ?case by(simp add: snd_def put_def get_def return_def)
-next
-  case (Suc nat)
-  then show ?case
-    using monfib_aux by (simp add: snd_def put_def get_def return_def)
-qed
+  apply(simp add: snd_def put_def get_def return_def)
+  apply(induction n arbitrary: a b)
+   apply(simp add: snd_def put_def get_def return_def)
+    apply(simp add: monfib_aux)
+    apply(simp only: put_def get_def return_def)
+    apply(simp)
+  by (metis monfib_aux snd_def)
 
 lemma fib_m_main: "snd (run_state (monfibacc n 0) 1) = fib n"
   apply (induction n rule:fib.induct)
@@ -95,17 +91,12 @@ lemma fib_m_main: "snd (run_state (monfibacc n 0) 1) = fib n"
   apply(simp)
   done
 
-
-lemma fib_mon_main: "snd (run_state (monfibacc n a) (b+a)) = fibacc n a (b+a)"
-  apply (induction n rule:nat.induct)
-    apply(simp add: snd_def put_def get_def return_def)
-    apply(simp add: snd_def put_def get_def return_def)
-
-
 lemma fib_mon_main: "snd (run_state (monfibacc n a) b) = fibacc n a b"
-  apply (induction n rule:nat.induct)
-   apply(simp add: snd_def put_def get_def return_def)
-  try0
-
+  apply(simp add: snd_def put_def get_def return_def)
+  apply (induction n arbitrary: a b rule:fib.induct)
+  apply(simp add: snd_def put_def get_def return_def)
+  apply(simp)
+  apply(simp_all add: snd_def put_def get_def return_def)
+  done
 
 end

@@ -30,13 +30,6 @@ fun fib :: "nat => nat" where
 | "fib (Suc 0) = 1"
 | "fib (Suc (Suc x)) = fib x + fib (Suc x)"
 
-
-value "fib (Suc (Suc 6)) "
-
-  
-value \<open>fibacc 6 0 1 = 8\<close>
-value \<open>fibacc 9 0 1 = 34\<close>
-
 text\<open>Experiment with finding a pattern to extract in the proof\<close>
 value \<open>fibacc 2 (fib 7) (fib 8)\<close>
 value \<open>fibacc 8 (fib 1) (fib 2)\<close>
@@ -54,14 +47,11 @@ lemma fib_aux: "fibacc n b (a + b) = fibacc (Suc n) a b"
   done
 
 lemma fib_aux1: "fibacc (Suc (Suc n)) a b = fibacc n a b + fibacc (Suc n) a b"
-proof(induct n arbitrary: a b)
-  case 0
-  then show ?case by simp_all
-next
-  case (Suc nat)
-  then show ?case
-    using fib_aux by simp
-qed
+  apply(induct n arbitrary: a b)
+  apply(simp)
+  apply(simp)
+  apply(simp only: fib_aux)
+  done
 
 lemma fib_main1: "fib n = fibacc n 0 1"
   apply(induction n rule: fib.induct)
@@ -78,126 +68,61 @@ lemma fibwrap_main: "fib_wrap n = fibacc n 0 1"
 lemma fib_main: "fib_wrap n = fib n"
   apply(induction n rule: fib.induct)
    apply(simp_all add: fib_main1 fibwrap_main)
-
-lemma fib_aux3[simp]: "fibacc (Suc n) 0 1 = fibacc n (fibacc (Suc 0) 0 1) (fibacc (Suc (Suc 0)) 0 1)"
-  apply(induct n rule: nat.induct)
-   apply(simp_all)
-
-
-lemma fib_aux4[simp]: "fibacc  n (fib (Suc 0)) (fib (Suc (Suc 0))) = fibacc n (fibacc (Suc 0) 0 1) (fibacc (Suc (Suc 0)) 0 1)"
-  apply(induct n rule: nat.induct)
-  apply(simp_all)
-
-
-lemma fib_gre[simp]: "fib n \<le> fib (Suc n)"
-proof(induction n rule: fib.induct)
-  case 1
-  then show ?case by simp
-next
-  case 2
-  then show ?case by simp
-next
-  case (3 x)
-  then show ?case by simp
-qed
-
-lemma fibacc_gre[simp]: "\<forall> (a::nat) (b::nat). a \<le> b \<Longrightarrow> fibacc n a b \<le> fibacc (Suc n) a b"
-  apply(induction n)
-   apply (simp_all)
-
-primrec pow :: "nat => nat => nat" where 
-    "pow x 0 = Suc 0"
-  | "pow x (Suc n) = x * pow x n"
-
-definition 
- "ipow x n = (if n < 0 then (1 / x) ^ nat (-n) else x ^ nat n)"
-(*
-lemma d : "\<forall>x \<ge> 1. ((int(fib (Suc(Suc x))) * int(fib x)) - (int(fib (Suc x) ^ 2))) = (if x mod 2 \<noteq> 0 then -1 else 1)"
-proof (induction x)
-*)
-
-lemma [simp]: "fibacc (Suc n) 0 1 > 0"
-  apply (induction n rule: nat.induct)
-   apply(simp_all)
-
-  
-
-lemma [simp]: "fib (Suc n) > 0"
-proof(induction n rule: fib.induct)
-  case 1
-  then show ?case by simp
-next
-  case 2
-  then show ?case by simp
-next
-  case (3 x)
-  then show ?case by simp
-qed
-
-
-lemma [simp]: "fib (Suc n) > 0"
-  by (induct n rule: fib.induct) simp_all
-
-text {* Alternative induction rule. *}
-theorem fib_induct:
-    "P 0 ==> P 1 ==> (\<And>n. P (n + 1) ==> P n ==> P (n + 2)) ==> P (n::nat)"
-  by (induct rule: fib.induct) simp_all
+  done
 
 text\<open>The fibonacci function does always return the result at the fst value of the pair. The initial state passed in should be (0,1)\<close>
 fun monfib:: "nat \<Rightarrow> (nat pair, unit) state" where
   "monfib 0 = skip" |
-  "monfib (Suc 0) = do {a \<leftarrow> get_snd; put_fst a}" |
+  "monfib (Suc 0) = do {b \<leftarrow> get_snd; put_fst b}" |
   "monfib (Suc (Suc n)) = do { a \<leftarrow> get_fst; b \<leftarrow> get_snd; temp_b \<leftarrow> return b; b \<leftarrow> return (a + b); put (temp_b,b); monfib (Suc n)}"
 
-
-value \<open>fst(snd(run_state (monfib 5) (0::nat,x::nat)))\<close>
+text\<open>Stefan do you - know why I can't run any of these examples?\<close>
+value \<open>fst(snd(run_state (monfib 5) (fst((0,1), ()))))\<close>
 value "fst(snd (run_state (monfib 6) x))"
 
-lemma fib_add:
-  "fib (n + k + 1) = fib (k + 1) * fib (n + 1) + fib k * fib n"
-  (is "?P n")
-proof (induct n rule: fib_induct)
-  show "?P 0" by simp
-  show "?P 1" by simp
-  fix n
-  have "fib (n + 2 + k + 1)
-    = fib (n + k + 1) + fib (n + 1 + k + 1)" by simp
-  also assume "fib (n + k + 1)
-    = fib (k + 1) * fib (n + 1) + fib k * fib n"
-      (is " _ = ?R1")
-  also assume "fib (n + 1 + k + 1)
-    = fib (k + 1) * fib (n + 1 + 1) + fib k * fib (n + 1)"
-      (is " _ = ?R2")
-  also have "?R1 + ?R2
-    = fib (k + 1) * fib (n + 2 + 1) + fib k * fib (n + 2)"
-    by (simp add: add_mult_distrib2)
-  finally show "?P (n + 2)" .
-qed
-
-
-value "fst(snd (run_state (monfib (Suc (Suc 4))) x)) = fst(snd (run_state (monfib 4) x)) + fst(snd (run_state (monfib (Suc 4)) x))"
-
 lemma monfib_aux: "fst(snd (run_state (monfib n) (b, (a + b)))) = fst(snd (run_state (monfib (Suc n)) (a, b)))"
+  apply(simp_all only: skip_def snd_def fst_def get_fst_def get_snd_def put_def put_fst_def return_def get_def)
   apply(induction n rule: nat.induct)
-   apply(simp add: skip_def get_snd_def)
-  done
+   apply(simp)
+   apply(simp only: skip_def snd_def fst_def get_fst_def get_snd_def put_def put_fst_def get_def return_def set_fst_def)
+   apply(simp add: get_snd_def return_def put_def get_fst_def get_def)
+  apply(simp add: get_fst_def return_def get_snd_def put_def get_def)
+done
 
+value "fst(snd (run_state (monfib (Suc (Suc 4))) x)) 
+        = fst(snd (run_state (monfib 4) x)) + fst(snd (run_state (monfib (Suc 4)) x))"
 
-lemma monfib_aux1: "fst(snd (run_state (monfib (Suc (Suc n))) x)) = fst(snd (run_state (monfib n) x)) + fst(snd (run_state (monfib (Suc n)) x))"
-proof (induction n)
-  case 0
-  then show ?case sorry
-next
-  case (Suc n)
-  then show ?case sorry
-qed
+lemma monfib_aux1: "fst(snd (run_state (monfib (Suc (Suc n))) x)) 
+      = fst(snd (run_state (monfib n) x)) + fst(snd (run_state (monfib (Suc n)) x))"
+  apply(simp_all add: skip_def snd_def fst_def get_fst_def get_snd_def put_def put_fst_def return_def get_def)
+  apply (induction n arbitrary: x rule: nat.induct)
+   apply (simp)
+   apply (simp only: skip_def get_snd_def return_def snd_def get_def put_fst_def set_fst_def put_def get_fst_def fst_def)
+   apply (simp add: return_def)
+   apply (simp)
+   apply (simp only: skip_def get_snd_def return_def snd_def get_def put_fst_def set_fst_def put_def get_fst_def fst_def)
+  apply (simp)
+  by (simp add: case_prod_beta' monfib_aux)
 
+lemma fib_mon_basic: "fst(snd(run_state (monfib n) (a,b))) = fibacc n a b"
+  apply(simp_all add: skip_def snd_def fst_def get_fst_def get_snd_def put_def put_fst_def return_def get_def)
+  apply (induction n arbitrary: a b)
+   apply (simp_all add: skip_def)
+  by (metis case_prod_beta' fib_aux monfib_aux)
 
+lemma fib_m_main: "fst(snd(run_state (monfib n) (0,1))) = fib n"
+  apply (induction n rule:fib.induct)
+    apply(simp add: snd_def put_def get_def return_def skip_def fst_def)
+    apply(simp add: snd_def put_def get_def return_def skip_def fst_def put_fst_def get_snd_def set_fst_def)
+  apply(simp add: snd_def get_fst_def get_def get_snd_def return_def fst_def put_def)
+  by (metis One_nat_def add.commute case_prod_beta' monfib_aux monfib_aux1 plus_1_eq_Suc)
 
-lemma fib_basic: "fst(snd(run_state (monfib n) x)) = fibacc n ((fst x)::nat) ((snd x)::nat)"
-  apply (induction n arbitrary: x rule:nat.induct)
-   apply (simp add:  skip_def)
-  sorry
+lemma fib_basic_aux: "fst(snd(run_state (monfib n) (0,1))) = fibacc n 0 1"
+  apply(simp_all add: skip_def snd_def fst_def get_fst_def get_snd_def put_def put_fst_def return_def get_def)
+  apply (induction n)
+   apply (simp add: skip_def)
+  by (metis One_nat_def case_prod_beta' fib_m_main fib_main1)
+
 
 
 end
