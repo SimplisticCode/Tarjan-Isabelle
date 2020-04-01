@@ -89,7 +89,6 @@ fun dnfp1:: "nat \<Rightarrow> nat list \<Rightarrow> nat \<Rightarrow> nat \<Ri
                              else s)"
 
 text\<open>A version using a state monad for storing the list/array that is being sorted\<close>
-text\<open>Stefan do you know why I can't perform the normal lookup operation here?\<close>
 fun dnfp_mon:: "nat \<Rightarrow> (env, unit) state" where
 "dnfp_mon 0  = skip"|
 "dnfp_mon (Suc 0)  = skip"|
@@ -101,33 +100,39 @@ fun dnfp_mon:: "nat \<Rightarrow> (env, unit) state" where
                                 do{
                                   (if s!i < 1 then do {
                                             l \<leftarrow> get_low;                                       
-                                            s \<leftarrow> (swap s i l);
-                                            put_xs s;
+                                            put_xs (swap s i l);
                                             put_i (Suc i);
-                                            put_low (Suc l)
+                                            put_low (Suc l);
+                                            dnfp_mon n
                                           }
                                    else (if s!i > 1 then do
                                           {
-                                            h \<leftarrow> return (h - 1);
-                                            put_high h;
-                                            s \<leftarrow> (swap s i h); 
-                                            put_xs s
+                                            put_high (h - 1);
+                                            put_xs (swap s i (h-1));
+                                            dnfp_mon n
                                           }
                                        else do {
-                                         put_i (Suc i)
+                                         put_i (Suc i);
+                                        dnfp_mon n
                                        }))
-                                  dnfp_mon n
                                 }
                              else skip)
                       }"
 
-value \<open>snd(run_state (dnfp_mon 5 0 5 0) [0,2,2,1,2])\<close>
-value \<open>snd(run_state (dnfp_mon 9 0 9 0) [0,2,2,0,1,0,2,1,2])\<close>
-value \<open>snd(run_state (dnfp_mon 3 0 3 0) [2,1,0])\<close>
+definition init_env:: "nat list \<Rightarrow> env" where
+  "init_env l \<equiv> \<lparr>high = (length l),            low = 0,
+                 i = 0,                         xs = l\<rparr>"
 
-value \<open>sorted(snd(run_state (dnfp_mon 5 0 5 0) [0,2,2,1,2]))\<close>
-value \<open>sorted(snd(run_state (dnfp_mon 9 0 9 0) [0,2,2,0,1,0,2,1,2]))\<close>
-value \<open>sorted(snd(run_state (dnfp_mon 3 0 3 0) [2,1,0]))\<close>
+definition init_state_env:: "nat list \<Rightarrow> (env, unit) state" where
+  "init_state_env l \<equiv> State (\<lambda>x. ((),init_env l))"
+
+value \<open>snd(run_state (dnfp_mon 5) (init_env [0,2,2,1,2]))\<close>
+value \<open>snd(run_state (dnfp_mon 9) (init_env [0,2,2,0,1,0,2,1,2]))\<close>
+value \<open>snd(run_state (dnfp_mon 3)(init_env[2,1,0]))\<close>
+
+value \<open>sorted(xs(snd(run_state (dnfp_mon 5) (init_env[0,2,2,1,2]))))\<close>
+value \<open>sorted(xs(snd(run_state (dnfp_mon 9) (init_env[0,2,2,0,1,0,2,1,2]))))\<close>
+value \<open>sorted(xs(snd(run_state (dnfp_mon 3) (init_env[2,1,0]))))\<close>
 
 
 lemma length_dnfp: "length(dnfp n xs k j k) = length xs"
