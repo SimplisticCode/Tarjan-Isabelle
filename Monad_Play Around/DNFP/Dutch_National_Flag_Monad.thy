@@ -89,6 +89,11 @@ definition dec_highbound where
                     put_xs (swap s j (h-1))
                 }"
 
+definition inc_index where
+"inc_index j \<equiv> do{
+                  put_i (Suc j)
+                }"
+
 definition loop_update_action where
 "loop_update_action s j h \<equiv> 
 do{
@@ -99,7 +104,7 @@ do{
     dec_highbound s j h
   }
  else do {
-   put_i (Suc j)
+    inc_index j
  }))
 }"
 
@@ -164,7 +169,8 @@ definition loop_update_action_post where
                                 \<and> high e \<ge> high e'
                                 \<and> low e \<le> low e'
                                 \<and> i e \<le> i e'
-                                \<and> invariants (xs e) (low e) (i e) (high e)
+                                \<and> high e - i e > high e' - i e' 
+                                \<and> invariants (xs e) (low e) (i e) (high e) \<comment> \<open>This is probably not necessary\<close>
                                 \<and> invariants (xs e') (low e') (i e') (high e')"
 
 definition inc_lowbound_pre where 
@@ -175,22 +181,28 @@ definition dec_highbound_pre where
 "dec_highbound_pre l j e n \<equiv> loop_update_action_pre l j n e  
                               \<and> l!j > 1"
 
+definition inc_index_pre where 
+"inc_index_pre l j e n \<equiv> loop_update_action_pre l j n e  
+                              \<and> l!j = 1"
+
 definition inc_lowbound_post where 
-"inc_lowbound_post e e'\<equiv> high e = high e' \<and>
-                          low e < low e' \<and>
-                          i e < i e' \<and>
-                          (\<forall>x. x < low e' \<longrightarrow> (xs e')!x = 1) \<and>
-                            high e - i e > high e' - i e' \<and>
-                            length (xs e) = length (xs e') \<and>
-                            distinct (xs e) = distinct (xs e')"
+"inc_lowbound_post e e'\<equiv> high e = high e'
+                          \<and> low e < low e'
+                          \<and> i e < i e'
+                          \<and> invariants (xs e') (low e') (i e') (high e')"
 
 definition dec_highbound_post where 
-"dec_highbound_post l e e' \<equiv> init_env l = e \<and>
-                                length l > high e' \<and>
-                                (\<forall>x. x > high e' \<longrightarrow> (xs e')!x = 2) \<and>
-                                high e - i e > high e' - i e' \<and>
-                                length (xs e) = length (xs e') \<and>
-                                distinct (xs e) = distinct (xs e')"
+"dec_highbound_post e e' \<equiv> length (xs e) > high e' 
+                              \<and> high e > high e' 
+                              \<and> low e = low e'
+                              \<and> i e = i e'
+                              \<and> invariants (xs e') (low e') (i e') (high e')"
+
+definition inc_index_post where 
+"inc_index_post e e' \<equiv> high e = high e' 
+                       \<and> low e = low e'
+                       \<and> i e < i e'
+                       \<and> invariants (xs e') (low e') (i e') (high e')"
 
 lemma inc_lowbound_post:
 "\<lbrakk>init_env l = e; length l = Suc n; low e = l1; i e = j1; high e = h1; 
