@@ -68,20 +68,6 @@ theorem fib_induct:
     "P 0 ==> P 1 ==> (\<And>n. P (n + 1) ==> P n ==> P (n + 2)) ==> P (n::nat)"
   by (induct rule: fib.induct) simp_all
 
-lemma fib_wrap: "fib_wrap n = fib n"
-proof (induct n)
-  case 0
-  then show ?case 
-  by (simp add: fib_wrap_def)
-next
-  case (Suc n)
-  then show ?case 
-  by slegdehammer
-  sorry
-qed
-
-
-
 text\<open>The fibonacci function does always return the result at the fst value of the pair. The initial state passed in should be (0,1)\<close>
 fun monfib:: "nat \<Rightarrow> (nat pair, unit) state" where
   "monfib 0 = skip" |
@@ -166,7 +152,6 @@ lemma fact_basic: "fst(snd (run_state (monfact n) (x::nat,y::nat))) = accfact n 
   apply (induction n arbitrary: x y)
    apply (simp add: put_fst_def get_fst_def snd_def fst_def skip_def)
   sledgehammer
-
 
 
 lemma monad_example1: "fst(snd(run_state (do { put (1, 1) }) (0, 0))) = 1" 

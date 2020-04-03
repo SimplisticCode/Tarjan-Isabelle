@@ -30,16 +30,21 @@ text\<open>The algorithm is constant so n is originally defined as the size of t
       i is the current element being investigated\<close>
 fun dnfp:: "nat \<Rightarrow> nat list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat list" where
 "dnfp 0 s _ _ _ = s"|
-"dnfp (Suc 0) s _ _ _ = s"|
 "dnfp (Suc n) s low high i = (if high > i then (if s!i < 1 then (dnfp n (swap s i low) (Suc low) high (Suc i))
                                 else (if s!i > 1 then (dnfp n (swap s i (high-1)) low (high-1) i)
                                   else (dnfp n s low high (Suc i))))
                              else s)"
 
+text\<open>A list will always be sorted after run\<close>
+lemma "sort(xs) = dnfp (length xs) xs 0 (length xs) 0"
+apply(induction xs)
+   apply(simp)
+  sledgehammer
+
+
 text\<open>Is this better - with the let and (Suc high)?\<close>
 fun dnfp1:: "nat \<Rightarrow> nat list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat list" where
 "dnfp1 0 s _ _ _ = s"|
-"dnfp1 (Suc 0) s _ _ _ = s"|
 "dnfp1 (Suc n) s low (Suc high) i = (if (Suc high) > i then (
                                   let (xs, l, h, j) = (if s!i < 1 then ((swap s i low), (Suc low), (Suc high), (Suc i))
                                                  else (if s!i > 1 then ((swap s i high), low, high, i)
@@ -50,7 +55,6 @@ fun dnfp1:: "nat \<Rightarrow> nat list \<Rightarrow> nat \<Rightarrow> nat \<Ri
 text\<open>A version using a state monad for storing the list/array that is being sorted\<close>
 fun dnfp_mon:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> (nat list, unit) state" where
 "dnfp_mon 0 _ _ _ = skip"|
-"dnfp_mon (Suc 0) _ _ _ = skip"|
 "dnfp_mon (Suc n) low high i = (if high > i then 
                                 do{
                                   s \<leftarrow> get;
@@ -68,6 +72,8 @@ fun dnfp_mon:: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Righ
                                        else dnfp_mon n low high (Suc i)))
                                 }
                              else skip)"
+
+
 
 value \<open>snd(run_state (dnfp_mon 5 0 5 0) [0,2,2,1,2])\<close>
 value \<open>snd(run_state (dnfp_mon 9 0 9 0) [0,2,2,0,1,0,2,1,2])\<close>
@@ -89,7 +95,8 @@ lemma distinct_dnfp[simp]:
   "distinct(dnfp n xs k j k) = distinct xs"
   apply(induction n)
    apply(simp)
-   apply(simp add: swap_def)
+  apply(simp only: swap_def distinct_def)
+  apply(simp add: rec_list_Cons_imp)
   sorry
 
 fun dnfp_alt:: "nat list \<Rightarrow> nat list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat list" where
