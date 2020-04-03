@@ -204,6 +204,23 @@ definition inc_index_post where
                        \<and> i e < i e'
                        \<and> invariants (xs e') (low e') (i e') (high e')"
 
+lemma inc_lowbound_pre_dom:
+  assumes "inc_lowbound_pre l j e n"
+  shows "colored e \<subseteq> vertices" 
+        "x \<in> vertices - colored e"
+        "x \<notin> set (stack e)"
+  sorry
+
+lemma inc_lowbound_post:
+"\<lbrakk>inc_lowbound_pre l j e n; snd (run_state (inc_lowbound l j) e) = e2\<rbrakk> \<Longrightarrow> inc_lowbound_post e e2"
+  apply(simp_all add: inc_lowbound_pre_def loop_update_action_pre_def  get_low_def inc_lowbound_post_def)
+  apply(simp_all add: inc_lowbound_def invariants_def  invariant_low_to_j_is_1_def low_invariant_is_0_def high_invariant_is_2_def )
+  apply(simp_all add: swap_def get_low_def return_def get_def high_def put_xs_def low_def iso_tuple_fst_def tuple_iso_tuple_def fst_def repr_def iso_tuple_snd_def)
+  apply(simp_all add: put_def snd_def put_i_def get_def env_ext_Tuple_Iso_def set_i_def)
+  apply(induction l)
+   apply simp
+  sorry
+
 lemma inc_lowbound_post:
 "\<lbrakk>init_env l = e; length l = Suc n; low e = l1; i e = j1; high e = h1; 
     h1 > j1; l!j1 < 1 ; snd (run_state (inc_lowbound l j1) e) = e2; high e2 = h2; i e2 = j2\<rbrakk> \<Longrightarrow> (h2 - j2) \<le> (h1 - j1)"
