@@ -98,9 +98,9 @@ do{
   {
     dec_highbound s j h
   }
-   else do {
-     put_i (Suc j)
-   }))
+ else do {
+   put_i (Suc j)
+ }))
 }"
 
 text\<open>A version using a state monad for storing the list/array that is being sorted\<close>
@@ -134,6 +134,34 @@ value \<open>sorted(xs(snd(run_state (dnfp_mon 3) (init_env[2,1,0]))))\<close>
 
 
 section\<open>Pre and postconditions\<close>
+definition inc_lowbound_pre where 
+"inc_lowbound_pre l j e n \<equiv> init_env l = e \<and>
+                             length l = Suc n \<and> 
+                             high e > j \<and>  
+                             l!j < 1"
+
+definition dec_highbound_pre where 
+"dec_highbound_pre l j e n \<equiv> init_env l = e \<and>
+                             length l = Suc n \<and>
+                             high e > j \<and>  
+                             l!j > 1"
+
+definition inc_lowbound_post where 
+"inc_lowbound_post e e'\<equiv> high e = high e' \<and>
+                          low e < low e' \<and>
+                          i e < i e' \<and>
+                          (\<forall>x. x < low e' \<longrightarrow> (xs e')!x = 1) \<and>
+                            high e - i e > high e' - i e' \<and>
+                            length (xs e) = length (xs e') \<and>
+                            distinct (xs e) = distinct (xs e')"
+
+definition dec_highbound_post where 
+"dec_highbound_post l e e' \<equiv> init_env l = e \<and>
+                                length l > high e' \<and>
+                                (\<forall>x. x > high e' \<longrightarrow> (xs e')!x = 2) \<and>
+                                high e - i e > high e' - i e' \<and>
+                                length (xs e) = length (xs e') \<and>
+                                distinct (xs e) = distinct (xs e')"
 
 lemma inc_lowbound_post:
 "\<lbrakk>init_env l = e; length l = Suc n; low e = l1; i e = j1; high e = h1; 
