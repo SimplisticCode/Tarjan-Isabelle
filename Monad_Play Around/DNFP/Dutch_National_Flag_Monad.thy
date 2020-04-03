@@ -133,18 +133,47 @@ value \<open>sorted(xs(snd(run_state (dnfp_mon 9) (init_env[0,2,2,0,1,0,2,1,2]))
 value \<open>sorted(xs(snd(run_state (dnfp_mon 3) (init_env[2,1,0]))))\<close>
 
 
-section\<open>Pre and postconditions\<close>
+section\<open>Definiton of all the Pre and postconditions\<close>
+
+subsection\<open>The invariants are taken from https://en.wikipedia.org/wiki/Dutch_national_flag_problem\<close>
+definition low_invariant_is_0 where
+"low_invariant_is_0 arr l\<equiv> (\<forall>x. x < l \<longrightarrow> arr!x = 0)"
+
+definition invariant_low_to_j_is_1 where
+"invariant_low_to_j_is_1 arr l j \<equiv> (\<forall>x. x \<ge> l \<and> x < j \<longrightarrow> arr!x = 1)"
+
+definition high_invariant_is_2 where
+"high_invariant_is_2 arr h\<equiv> (\<forall>x. x \<ge> h \<longrightarrow> arr!x = 2)"
+
+definition invariants where
+"invariants arr l j h\<equiv> low_invariant_is_0 arr l
+              \<and> invariant_low_to_j_is_1 arr l j
+              \<and> high_invariant_is_2 arr h"
+
+text\<open>This can be used in the other pre and post-conditions for the methods inside loop_update_actions\<close>
+
+text\<open>Should I just take the environment as a single parameter here?\<close>
+definition loop_update_action_pre where
+"loop_update_action_pre l j n e \<equiv> length l \<ge> Suc n \<and> 
+                                    high e > j \<and>
+                                    invariants l (low e) j (high e)"
+
+definition loop_update_action_post where
+"loop_update_action_post e e' \<equiv> length (xs e) = length (xs e')
+                                \<and> length (xs e) = length (xs e')  
+                                \<and> high e \<ge> high e'
+                                \<and> low e \<le> low e'
+                                \<and> i e \<le> i e'
+                                \<and> invariants (xs e) (low e) (i e) (high e)
+                                \<and> invariants (xs e') (low e') (i e') (high e')"
+
 definition inc_lowbound_pre where 
-"inc_lowbound_pre l j e n \<equiv> init_env l = e \<and>
-                             length l = Suc n \<and> 
-                             high e > j \<and>  
-                             l!j < 1"
+"inc_lowbound_pre l j e n \<equiv> loop_update_action_pre l j n e 
+                            \<and> l!j < 1"
 
 definition dec_highbound_pre where 
-"dec_highbound_pre l j e n \<equiv> init_env l = e \<and>
-                             length l = Suc n \<and>
-                             high e > j \<and>  
-                             l!j > 1"
+"dec_highbound_pre l j e n \<equiv> loop_update_action_pre l j n e  
+                              \<and> l!j > 1"
 
 definition inc_lowbound_post where 
 "inc_lowbound_post e e'\<equiv> high e = high e' \<and>
