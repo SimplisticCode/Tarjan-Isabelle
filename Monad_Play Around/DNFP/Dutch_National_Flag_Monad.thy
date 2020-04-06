@@ -2,17 +2,20 @@ theory Dutch_National_Flag_Monad
 imports 
   Main
   "~~/src/HOL/Library/State_Monad"
-
+                  
 begin
 
 text\<open>Monad definitions to encode and extract data from the monad\<close>
 datatype color = red | white | blue
+
+type_synonym 'a array = "'a list"
+
 section\<open>Monad definitions\<close>
 record env = 
   high :: "nat"
   low  :: "nat"
   i    :: "nat"
-  xs   :: "nat list"
+  xs   :: "nat array"
   
 definition return:: "'a \<Rightarrow> ('b, 'a) state" where "return = State_Monad.return"
 definition get:: "(env, env) state" where "get = State (\<lambda>x. (x,x))"
@@ -21,7 +24,7 @@ definition get_gen:: "(env \<Rightarrow> 'b) \<Rightarrow> (env, 'b) state" wher
 definition get_high:: "(env, nat) state" where "get_high = do { x \<leftarrow> get; return (high  x) }" 
 definition get_low:: "(env, nat) state" where "get_low = do { x \<leftarrow> get; return (low x) }" 
 definition get_i:: "(env, nat) state" where "get_i = do { x \<leftarrow> get; return (i x) }" 
-definition get_xs:: "(env, nat list) state" where "get_xs = do { x \<leftarrow> get; return (xs x) }" 
+definition get_xs:: "(env, nat array) state" where "get_xs = do { x \<leftarrow> get; return (xs x) }" 
 definition set_high:: "env \<Rightarrow> nat \<Rightarrow> env" where "set_high v x =  
 \<lparr>            high = x,
              low = low v,
@@ -37,7 +40,7 @@ definition set_i:: "env \<Rightarrow> nat \<Rightarrow> env" where "set_i v x =
              low = low v,
              i = x,
              xs = xs v \<rparr>"
-definition set_xs:: "env \<Rightarrow> nat list \<Rightarrow> env" where "set_xs v x =
+definition set_xs:: "env \<Rightarrow> nat array \<Rightarrow> env" where "set_xs v x =
 \<lparr>            high = high v,
              low = low v,
              i = i v,
@@ -46,12 +49,11 @@ definition set_xs:: "env \<Rightarrow> nat list \<Rightarrow> env" where "set_xs
 definition put_high:: "nat \<Rightarrow> (env, unit) state" where "put_high x = do { v \<leftarrow> get; put (set_high v x) }"
 definition put_low:: "nat \<Rightarrow> (env, unit) state" where "put_low x = do { v \<leftarrow> get; put (set_low v x) }"
 definition put_i:: "nat \<Rightarrow> (env, unit) state" where "put_i x = do { v \<leftarrow> get; put (set_i v x) }"
-definition put_xs:: "nat list \<Rightarrow> (env, unit) state" where "put_xs x = do { v \<leftarrow> get; put (set_xs v x) }"
+definition put_xs:: "nat array \<Rightarrow> (env, unit) state" where "put_xs x = do { v \<leftarrow> get; put (set_xs v x) }"
 definition skip:: "(env, unit) state" where "skip = State (\<lambda>x. ((),x))"
 
 section\<open>DNFP\<close>
 
-type_synonym 'a array = "'a list"
 
 definition swap:: "'a array \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a array" where
 "swap l x y \<equiv> (if x < length l \<and> y < length l then l[x := l!y, y := l!x] else l)"
@@ -96,17 +98,13 @@ definition inc_index where
 "inc_index j \<equiv> do{
                   put_i (Suc j)
                 }"
-(*
-definition hoare_def where
-"hoare_def pre prog post \<equiv> "
-*)
 
 definition loop_update_action where
 "loop_update_action s j h \<equiv> 
 do{
   (if s!j < 1 then do {
     inc_lowbound s j
-  }else (if s!j > 1 then do
+  }else (if s!j > 1 then do 
   {
     dec_highbound s j h
   }
@@ -129,12 +127,16 @@ fun dnfp_mon:: "nat \<Rightarrow> (env, unit) state" where
                        else skip
                       )}"
 
-definition init_env:: "nat list \<Rightarrow> env" where
+definition init_env:: "nat array \<Rightarrow> env" where
   "init_env l \<equiv> \<lparr>high = (length l),            low = 0,
                  i = 0,                         xs = l\<rparr>"
 
-definition init_state_env:: "nat list \<Rightarrow> (env, unit) state" where
+definition init_state_env:: "nat array \<Rightarrow> (env, unit) state" where
   "init_state_env l \<equiv> State (\<lambda>x. ((),init_env l))"
+
+definition mk_rec:: "nat array \<Rightarrow>nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> env" where
+"mk_rec arr l j h \<equiv> \<lparr>high = h,            low = l,
+                     i = j,                xs = arr\<rparr>"
 
 value \<open>snd(run_state (dnfp_mon 5) (init_env [0,2,2,1,2]))\<close>
 value \<open>snd(run_state (dnfp_mon 9) (init_env [0,2,2,0,1,0,2,1,2]))\<close>
@@ -148,7 +150,7 @@ section\<open>Definiton of all the Pre and postconditions\<close>
 
 subsection\<open>The invariants are taken from https://en.wikipedia.org/wiki/Dutch_national_flag_problem\<close>
 definition low_invariant_is_0 where
-"low_invariant_is_0 arr l\<equiv> (\<forall>x. x < l \<longrightarrow> arr!x = 0)"
+"low_invariant_is_0 arr l \<equiv> (\<forall>x. x < l \<longrightarrow> arr!x = 0)"
 
 definition invariant_low_to_j_is_1 where
 "invariant_low_to_j_is_1 arr l j \<equiv> (\<forall>x. (x \<ge> l \<and> x < j) \<longrightarrow> arr!x = 1)"
@@ -161,66 +163,47 @@ definition invariants where
               \<and> invariant_low_to_j_is_1 arr l j
               \<and> high_invariant_is_2 arr h"
 
-definition invariants1 where
-"invariants1 arr l j h\<equiv> low_invariant_is_0 arr l
-              \<and> high_invariant_is_2 arr h"
-
 text\<open>This can be used in the other pre and post-conditions for the methods inside loop_update_actions\<close>
-
-text\<open>Should I just take the environment as a single parameter here?\<close>
 
 subsection\<open>Pre- and Postconditions\<close>
 definition loop_update_action_pre where
-"loop_update_action_pre l j n e \<equiv> length l \<ge> Suc n \<and> 
-                                    high e > j \<and>
-                                    invariants l (low e) j (high e)"
-
-definition loop_update_action_pre1 where
-"loop_update_action_pre1 e \<equiv> high e > j \<and>
-                             invariants1 l (low e) j (high e)"
+"loop_update_action_pre e \<equiv> high e > i e 
+                              \<and> length (xs e) > (Suc 0)
+                              \<and> length (xs e) \<ge> high e
+                              \<and> low e < high e
+                              \<and> low e \<le> i e"
 
 definition loop_update_action_post where
 "loop_update_action_post e e' \<equiv> length (xs e) = length (xs e')
-                                \<and> length (xs e) = length (xs e')  
                                 \<and> high e \<ge> high e'
                                 \<and> low e \<le> low e'
                                 \<and> i e \<le> i e'
-                                \<and> high e - i e > high e' - i e' 
-                                \<and> invariants (xs e) (low e) (i e) (high e) \<comment> \<open>This is probably not necessary\<close>
-                                \<and> invariants (xs e') (low e') (i e') (high e')"
+                                \<and> high e - i e > high e' - i e'"
 
 definition inc_lowbound_pre where 
-"inc_lowbound_pre l j e n \<equiv> loop_update_action_pre l j n e 
-                            \<and> l!j < 1"
+"inc_lowbound_pre arr l j h\<equiv> loop_update_action_pre (mk_rec arr l j h)
+                            \<and> arr!j < 1"
 
 definition dec_highbound_pre where 
-"dec_highbound_pre l j e n \<equiv> loop_update_action_pre l j n e  
-                              \<and> l!j > 1"
+"dec_highbound_pre arr l j h \<equiv> loop_update_action_pre (mk_rec arr l j h)  
+                              \<and> arr!j > 1"
 
 definition inc_index_pre where 
-"inc_index_pre l j e n \<equiv> loop_update_action_pre l j n e  
-                              \<and> l!j = 1"
-
-definition add_high_pre where 
-"add_high_pre l j e n \<equiv> loop_update_action_pre l j n e  
-                              \<and> l!j > 1"
-
-definition inc_index_pre1 where 
-"inc_index_pre1 l j e n \<equiv> loop_update_action_pre1 l j n e  
-                              \<and> l!j = 1"
+"inc_index_pre arr l j h \<equiv> loop_update_action_pre (mk_rec arr l j h) 
+                              \<and> arr!j = 1"
 
 definition inc_lowbound_post where 
 "inc_lowbound_post e e'\<equiv> high e = high e'
                           \<and> low e < low e'
-                          \<and> i e < i e'
-                          \<and> invariants (xs e') (low e') (i e') (high e')"
+                          \<and> loop_update_action_post e e'
+                          \<and> i e < i e'"
 
 definition dec_highbound_post where 
 "dec_highbound_post e e' \<equiv> length (xs e) > high e' 
-                              \<and> high e > high e' 
+                              \<and> high e = Suc (high e') 
                               \<and> low e = low e'
                               \<and> i e = i e'
-                              \<and> invariants (xs e') (low e') (i e') (high e')"
+                              \<and> loop_update_action_post e e'"
 
 definition add_high_post where 
 "add_high_post e e' \<equiv> high e = high e' 
@@ -281,23 +264,52 @@ definition inc_index_post_simple where
                        \<and> high e - i e > high e' - i e' 
                        \<and> xs e = xs e'"
 
-lemma inc_lowbound_simple: "\<lbrakk>inc_lowbound_simple_pre l j1 h \<and> l = xs e \<and> i e = j1 \<and> high e = h \<and> snd(run_state (inc_lowbound l j1) e) = e2\<rbrakk> \<Longrightarrow> inc_lowbound_simple_post e e2"
-  apply(simp_all add: inc_lowbound_simple_pre_def snd_def inc_lowbound_def get_low_def put_i_def put_xs_def set_xs_def put_low_def return_def get_def put_def set_low_def set_i_def inc_lowbound_simple_post_def)
-  apply(simp_all add: swap_def)
+subsection\<open>Inc_lowbound Invariants\<close>
+text\<open>Pre and post-condition\<close>
+lemma inc_lowbound_prepost: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; low_invariant_is_0 arr l;snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> inc_lowbound_post e e2"
+  apply(simp_all add: inc_lowbound_pre_def mk_rec_def loop_update_action_pre_def inc_lowbound_post_def snd_def loop_update_action_post_def inc_lowbound_def)
+  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
+  by(auto)
+
+subsubsection\<open>Invariants\<close>
+lemma inc_lowbound_invariantRed: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; low_invariant_is_0 (xs e) (low e);snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> low_invariant_is_0 (xs e2) (low e2)"
+apply(simp_all add: inc_lowbound_pre_def mk_rec_def loop_update_action_pre_def low_invariant_is_0_def snd_def loop_update_action_post_def inc_lowbound_def)
+  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
+  using less_Suc_eq by (auto)
+
+lemma inc_lowbound_invariantBlue: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; high_invariant_is_2 (xs e) (high e);snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> high_invariant_is_2 (xs e2) (high e2)"
+apply(simp_all add: inc_lowbound_pre_def mk_rec_def loop_update_action_pre_def high_invariant_is_2_def snd_def loop_update_action_post_def inc_lowbound_def)
+  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
+  using less_Suc_eq by (auto)
+
+lemma inc_lowbound_invariantWhite: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; invariant_low_to_j_is_1 (xs e) (low e) (i e);snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2)"
+apply(simp_all add: inc_lowbound_pre_def mk_rec_def loop_update_action_pre_def invariant_low_to_j_is_1_def snd_def loop_update_action_post_def inc_lowbound_def)
+  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
+  using less_Suc_eq by (auto)
+
+subsection\<open>Dec_highbound Invariants\<close>
+lemma dec_highbound_prepost: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> dec_highbound_post e e2"
+  apply(simp_all add: dec_highbound_pre_def mk_rec_def loop_update_action_pre_def dec_highbound_post_def snd_def loop_update_action_post_def dec_highbound_def)
+  apply(simp_all add: put_high_def add_high_def set_high_def put_xs_def put_def get_def swap_def set_xs_def)
+  by(auto)
+
+subsubsection\<open>Invariants\<close>
+lemma dec_highbound_invariantRed: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; low_invariant_is_0 (xs e) (low e);snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> low_invariant_is_0 (xs e2) (low e2)"
+apply(simp_all add: dec_highbound_pre_def mk_rec_def loop_update_action_pre_def low_invariant_is_0_def snd_def loop_update_action_post_def dec_highbound_def)
+  apply(simp_all add: put_high_def add_high_def set_high_def put_xs_def put_def get_def swap_def set_xs_def)
   by (auto)
 
-lemma dec_highbound_simple: "\<lbrakk>dec_highbound_simple_pre l j1 h \<and> l = xs e \<and> i e = j1 \<and> high e = h \<and> snd(run_state (dec_highbound l j1 h) e) = e2\<rbrakk> \<Longrightarrow> dec_highbound_simple_post e e2"
-  apply(simp_all add: dec_highbound_simple_pre_def snd_def dec_highbound_def put_high_def put_xs_def put_def set_i_def dec_highbound_simple_post_def swap_def get_def)
-  apply(simp_all add: set_high_def set_xs_def add_high_def swap_def put_xs_def get_def put_def)
+lemma dec_highbound_invariantWhite: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; invariant_low_to_j_is_1 (xs e) (low e) (i e);snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2)"
+apply(simp_all add: dec_highbound_pre_def mk_rec_def loop_update_action_pre_def invariant_low_to_j_is_1_def snd_def loop_update_action_post_def dec_highbound_def)
+  apply(simp_all add: put_high_def add_high_def set_high_def put_xs_def put_def get_def swap_def set_xs_def)
   by (auto)
 
-text\<open>This goes through pretty easy\<close>
-lemma inc_index_j_simple: "\<lbrakk>inc_index_simple_pre j1 h \<and> i e = j1 \<and> high e = h \<and> snd(run_state (inc_index j1) e) = e2\<rbrakk> \<Longrightarrow> inc_index_post_simple e e2"
-  apply(simp_all add: inc_index_simple_pre_def snd_def inc_index_def put_i_def put_def set_i_def inc_index_post_simple_def get_def)
-  by (auto)
+lemma dec_highbound_invariantBlue: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; high_invariant_is_2 (xs e) (high e);snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> high_invariant_is_2 (xs e2) (high e2)"
+apply(simp_all add: dec_highbound_pre_def mk_rec_def loop_update_action_pre_def high_invariant_is_2_def snd_def loop_update_action_post_def dec_highbound_def)
+  apply(simp_all add: put_high_def add_high_def set_high_def put_xs_def put_def get_def swap_def set_xs_def)
+  sorry
 
-lemma inv_aux: "\<lbrakk>xs e = xs e2; low e = low e2; i e < i e2; high e = high2; low_invariant_is_0 (xs e) (low e)\<rbrakk> \<Longrightarrow> low_invariant_is_0 (xs e2) (low e2)"
-  by(simp)
+subsection\<open>Inc_index Invariants\<close>
 
 text\<open>This is the same as above, but it contains the invariants that includes some universal quantifier\<close>
 lemma inc_index_j_simple_aux: "\<lbrakk>inc_index_simple_pre j1 h; i e = j1 ; high e = h; low_invariant_is_0 (xs e) (low e); 
@@ -305,60 +317,34 @@ lemma inc_index_j_simple_aux: "\<lbrakk>inc_index_simple_pre j1 h; i e = j1 ; hi
      snd(run_state (inc_index j1) e) = e2 \<rbrakk> \<Longrightarrow> inc_index_post_simple e e2 \<Longrightarrow> low_invariant_is_0 (xs e2) (low e2) \<Longrightarrow> high_invariant_is_2 (xs e2) (high e2)"
   by(simp_all add: inc_index_simple_pre_def snd_def inc_index_def put_i_def put_def set_i_def inc_index_post_simple_def get_def)
 
-lemma inc_index_j: "\<lbrakk>inc_index_pre1 l j e n; xs e = l; i e = j; snd(run_state (inc_index j) e) = e2\<rbrakk> \<Longrightarrow> inc_index_post1 e e2"
-  apply(simp_all add: snd_def  inc_index_def inc_index_post1_def inc_index_pre1_def loop_update_action_pre1_def)
-  apply(simp_all add: invariants1_def low_invariant_is_0_def high_invariant_is_2_def put_i_def get_def set_i_def put_def)
-  by (auto)
-
 text\<open>This is the proof of Inc Index that it preserves the invariants\<close>
-lemma inc_index_j_real: "\<lbrakk>inc_index_pre l j e n; xs e = l; i e = j; snd(run_state (inc_index j) e) = e2\<rbrakk> \<Longrightarrow> inc_index_post e e2"
-  apply(simp_all add: snd_def  inc_index_def inc_index_post_def inc_index_pre_def loop_update_action_pre_def)
+lemma inc_index_j: "\<lbrakk>inc_index_pre l j e n; xs e = l; i e = j; snd(run_state (inc_index j) e) = e2\<rbrakk> \<Longrightarrow> inc_index_post e e2"
+  apply(simp_all add: snd_def inc_index_def inc_index_post_def inc_index_pre_def loop_update_action_pre_def)
   apply(simp_all add: invariants_def low_invariant_is_0_def invariant_low_to_j_is_1_def high_invariant_is_2_def put_i_def get_def set_i_def put_def)
   using less_Suc_eq by (force)
 
-lemma add_high_keep_invariants :"\<lbrakk>add_high_pre l j e n; xs e = l; l!j = 2; i e = j; high e = h; snd(run_state (add_high l j h) e) = e2\<rbrakk> \<Longrightarrow> add_high_post e e2"
-  apply(simp_all add: add_high_pre_def loop_update_action_pre_def invariants_def add_high_post_def add_high_def snd_def)
-  apply(simp_all add: put_xs_def put_def get_def set_xs_def swap_def)
-proof -
-assume a1: "Suc n \<le> length l \<and> j < h \<and> low_invariant_is_0 l (low e) \<and> invariant_low_to_j_is_1 l (low e) j \<and> high_invariant_is_2 l h"
-assume a2: "l ! j = 2"
-  assume a3: "\<lparr>high = h, low = low e, i = j, xs = if j < length l \<and> h < length l then l[j := l ! h, h := l ! j] else l\<rparr> = e2"
-  then have "(if j < length l \<and> h < length l then l[j := l ! h, h := 2] else l) = xs e2"
-    using a2 by fastforce
-  then show "h = high e2 \<and> low e = low e2 \<and> j = i e2 \<and> length l = length (xs e2) \<and> low_invariant_is_0 (xs e2) (low e2) \<and> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2) \<and> high_invariant_is_2 (xs e2) (high e2)"
-    using a3 a2 a1 by (metis high_invariant_is_2_def le_refl list_update_id select_convs(1) select_convs(2) select_convs(3))
-qed
-
-lemma dec_highbound: "\<lbrakk>dec_highbound_pre l j e n; l = xs e;i e = j; l!j = 2;high e = h; h < length (xs e) ;snd(run_state (dec_highbound l j h) e) = e2\<rbrakk>
-                       \<Longrightarrow>  h = (Suc (high e2)) \<Longrightarrow> dec_highbound_post e e2"
-  apply(simp_all add: dec_highbound_pre_def snd_def dec_highbound_def loop_update_action_pre_def invariants_def dec_highbound_post_def)
-  apply(simp_all add: put_xs_def put_high_def get_def put_def set_xs_def swap_def set_high_def)
-  apply(simp_all add: low_invariant_is_0_def invariant_low_to_j_is_1_def high_invariant_is_2_def add_high_def)
-  apply(simp_all add: swap_def put_xs_def get_def put_def set_xs_def)
+subsection\<open>Loop update action\<close>
+lemma loop_update_action_prepost: "\<lbrakk>(mk_rec arr l j h) = e; loop_update_action_pre e; snd(run_state (loop_update_action arr j h) e) = e2 \<rbrakk> \<Longrightarrow> loop_update_action_post e e2"
+  apply(simp_all add:  mk_rec_def loop_update_action_pre_def snd_def loop_update_action_post_def loop_update_action_def)
+  apply(simp_all only: inc_lowbound_def dec_highbound_def inc_index_def get_low_def return_def put_high_def set_high_def put_xs_def put_def get_def swap_def)
+  apply(simp_all only: set_low_def put_low_def set_xs_def put_i_def add_high_def put_def get_def set_i_def put_xs_def)
   sledgehammer
 
-lemma inc_lowbound_post:
-"\<lbrakk>inc_lowbound_pre l j e n; xs e = l; i e = j; snd (run_state (inc_lowbound l j) e) = e2\<rbrakk> \<Longrightarrow> inc_lowbound_post e e2"
-  apply(simp_all add: inc_lowbound_pre_def loop_update_action_pre_def  get_low_def inc_lowbound_post_def)
-  apply(simp_all add: inc_lowbound_def invariants_def  invariant_low_to_j_is_1_def low_invariant_is_0_def high_invariant_is_2_def)
-  apply(simp_all add: swap_def get_low_def return_def get_def  put_xs_def fst_def snd_def)
-  apply(simp_all add: put_def snd_def put_i_def get_def set_i_def set_xs_def put_low_def set_low_def)
-  by(auto)
+subsubsection\<open>Invariants\<close>
+lemma  loop_update_action_invariantRed: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; low_invariant_is_0 (xs e) (low e);snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> low_invariant_is_0 (xs e2) (low e2)"
+apply(simp_all add: inc_lowbound_pre_def mk_rec_def loop_update_action_pre_def low_invariant_is_0_def snd_def loop_update_action_post_def inc_lowbound_def)
+  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
+  using less_Suc_eq by (auto)
 
-lemma inc_lowbound_post1:
-"\<lbrakk>inc_lowbound_pre l j1 e n; xs e = l; i e = j1; high e = h1;
-    h1 > j1; l!j1 < 1 ; snd (run_state (inc_lowbound l j1) e) = e2; high e2 = h2; i e2 = j2\<rbrakk> \<Longrightarrow> (h2 - j2) \<le> (h1 - j1) \<Longrightarrow> h2 = h1 \<Longrightarrow> j2 > j1"
-  apply(simp_all add: snd_def inc_lowbound_def get_low_def return_def swap_def put_i_def put_def)
-  apply(simp_all add: put_low_def set_i_def set_low_def get_def put_def put_xs_def set_xs_def)
-  by (auto)
+lemma  loop_update_action_invariantBlue: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; high_invariant_is_2 (xs e) (high e);snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> high_invariant_is_2 (xs e2) (high e2)"
+apply(simp_all add: inc_lowbound_pre_def mk_rec_def loop_update_action_pre_def high_invariant_is_2_def snd_def loop_update_action_post_def inc_lowbound_def)
+  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
+  using less_Suc_eq by (auto)
 
-lemma inc_lowbound_post2:
-"\<lbrakk>inc_lowbound_pre l j1 e n; xs e = l; i e = j1; high e = h1;
-    h1 > j1; l!j1 = 0 ; snd (run_state (inc_lowbound l j1) e) = e2\<rbrakk> \<Longrightarrow> high e = high e2 \<Longrightarrow>  j2 > j1  \<Longrightarrow> inc_lowbound_post e e2"
-  apply(simp_all add: snd_def inc_lowbound_def loop_update_action_pre_def  get_low_def return_def swap_def put_i_def put_def  inc_lowbound_pre_def inc_lowbound_post_def invariants_def)
-  apply(simp_all add:  low_invariant_is_0_def invariant_low_to_j_is_1_def high_invariant_is_2_def  put_low_def set_i_def set_low_def get_def put_def put_xs_def set_xs_def inc_lowbound_post1)
-  sorry
-
+lemma  loop_update_action_invariantWhite: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; invariant_low_to_j_is_1 (xs e) (low e) (i e);snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2)"
+apply(simp_all add: inc_lowbound_pre_def mk_rec_def loop_update_action_pre_def invariant_low_to_j_is_1_def snd_def loop_update_action_post_def inc_lowbound_def)
+  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
+  using less_Suc_eq by (auto)
 
 text\<open>The difference between high and i will never increase and will be decreased by loop_update_action\<close>
 lemma termination_loop_update_action:
@@ -366,49 +352,18 @@ lemma termination_loop_update_action:
   apply(simp_all add: snd_def init_env_def loop_update_action_def)
   apply(simp_all only: inc_lowbound_def dec_highbound_def inc_index_def)
   apply(simp_all only: get_low_def put_xs_def get_def put_def put_i_def set_xs_def set_i_def put_low_def set_low_def put_high_def)
-  apply(simp_all only: swap_def set_high_def dec_highbound_simple inc_lowbound_simple inc_index_j_simple)
+  apply(simp_all only: swap_def set_high_def)
   sledgehammer
   sorry
 
 
-lemma termination_loop_update_action:
-"\<lbrakk>init_env l = e; high e = h1; i e = j1; h1 > j1 ; h1 - j1 = dif1; snd (run_state (loop_update_action l j1 h1) e) = e2; high e2 = h2; i e2 = j2\<rbrakk> \<Longrightarrow> (h2 - j2) < (h1 - j1) "
-
-
-
-text\<open>Would you add your condition to the assumptions?
-     I mean would you extract low and make sure all elements before low are 0?\<close>
-lemma low_and_down_is_0:
-"\<lbrakk>init_env l = e;  low e = l1; \<forall>x:: nat. x < l1 \<Longrightarrow> l!x = 0; l!j = 0; low(snd (run_state (inc_lowbound l j) e)) = l2\<rbrakk> \<Longrightarrow> l1 < l2 "
-  sorry
-
-lemma low_to_i_is_1:
-"\<lbrakk>dfs1_dfs_dom (Inl (x, e)); black e = bl1; black (snd (run_state (dfs1 x) e)) = bl2 \<rbrakk> \<Longrightarrow> bl1 \<subseteq> bl2"
-  sorry
-
-lemma i_to_high_is_nonsorted:
-"\<lbrakk>dfs1_dfs_dom (Inl (x, e)); black e = bl1; black (snd (run_state (dfs1 x) e)) = bl2 \<rbrakk> \<Longrightarrow> bl1 \<subseteq> bl2"
-  sorry
-
-lemma high_and_up_is_2:
-"\<lbrakk>dfs1_dfs_dom (Inl (x, e)); black e = bl1; black (snd (run_state (dfs1 x) e)) = bl2 \<rbrakk> \<Longrightarrow> bl1 \<subseteq> bl2"
-  sorry
-
-lemma length_dnfp: "length(dnfp n xs k j k) = length xs"
-  apply(induction n)
-   apply(simp)
-    apply(simp add: swap_def length_swap)
-  apply(simp)
-  sorry
-
 lemma distinct_dnfp[simp]:
   "distinct(dnfp n xs k j k) = distinct xs"
-  apply(induction n)
    apply(simp)
    apply(simp add: swap_def)
   sorry
 
-fun dnfp_alt:: "nat list \<Rightarrow> nat list \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat list" where
+fun dnfp_alt:: "nat array \<Rightarrow> nat array \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat list" where
 "dnfp_alt [] s _ _ _ _ = s"|
 "dnfp_alt (x#xs) s low high i mid = (if high > i then (if s!i < mid then (dnfp_alt xs (swap s i low) (Suc low) high (Suc i) mid)
                                       else (if s!i > mid then (dnfp_alt xs (swap s i (high-1)) low (high-1) i mid)
