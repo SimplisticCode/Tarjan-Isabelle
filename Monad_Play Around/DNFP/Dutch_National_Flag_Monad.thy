@@ -188,8 +188,8 @@ definition inc_lowbound_pre where
 
 definition dec_highbound_pre where 
 "dec_highbound_pre arr l j h \<equiv> loop_update_action_pre (mk_rec arr l j h)  
-                              \<and> arr!j > 1
-                              \<and> arr!h > 2"
+                              \<and> arr!j = 2
+                              \<and> arr!h = 2"
 
 definition inc_index_pre where 
 "inc_index_pre arr l j h \<equiv> loop_update_action_pre (mk_rec arr l j h) 
@@ -207,7 +207,7 @@ definition dec_highbound_post where
                               \<and> high e = Suc (high e') 
                               \<and> low e = low e'
                               \<and> i e = i e'
-                              \<and> (xs e')!(high e) > 1
+                              \<and> (xs e')!(high e') = 2
                               \<and> loop_update_action_post e e'"
 
 definition add_high_post where 
@@ -271,7 +271,7 @@ apply(simp_all add: dec_highbound_pre_def mk_rec_def loop_update_action_pre_def 
 lemma dec_highbound_invariantBlue: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; high_invariant_is_2 (xs e) (high e);snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> high_invariant_is_2 (xs e2) (high e2)"
 apply(simp_all add: dec_highbound_pre_def mk_rec_def loop_update_action_pre_def high_invariant_is_2_def snd_def loop_update_action_post_def dec_highbound_def)
   apply(simp_all add: put_high_def add_high_def set_high_def put_xs_def put_def get_def swap_def set_xs_def)
-  by(auto)
+  by (smt Suc_pred le_less_Suc_eq length_list_update not_less not_less_eq nth_list_update nth_list_update_neq select_convs(1) select_convs(4) zero_less_Suc)
 
 lemma dec_highbound_inv: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; invariant_low_to_j_is_1 (xs e) (low e) (i e); high_invariant_is_2 (xs e) (high e);
                         low_invariant_is_0 (xs e) (low e); snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2) \<and> low_invariant_is_0 (xs e2) (low e2) \<and> high_invariant_is_2 (xs e2) (high e2)"
@@ -317,7 +317,7 @@ text\<open>I think I should be able to use the lemmators defined above\<close>
 lemma  loop_update_action_invariantRed: "\<lbrakk>(mk_rec arr l j h) = e; loop_update_action_pre e;  low_invariant_is_0 (xs e) (low e);snd(run_state (loop_update_action arr j h) e) = e2 \<rbrakk> \<Longrightarrow> low_invariant_is_0 (xs e2) (low e2)"
   apply(simp_all add: mk_rec_def loop_update_action_pre_def low_invariant_is_0_def snd_def loop_update_action_post_def loop_update_action_def)
   apply(simp_all only: inc_lowbound_def dec_highbound_def inc_index_def get_low_def put_high_def set_high_def put_xs_def put_def get_def swap_def)
-   apply(simp_all only: set_low_def put_low_def set_xs_def put_i_def add_high_def put_def get_def set_i_def put_xs_def swap_def)
+   apply(simp_all only: set_low_def put_low_def set_xs_def put_i_def add_high_def put_def get_def set_i_def put_xs_def swap_def return_def)
   sorry
 
 lemma  loop_update_action_invariantBlue: "\<lbrakk>(mk_rec arr l j h) = e; loop_update_action_pre e;  high_invariant_is_2 (xs e) (high e);snd(run_state (loop_update_action arr j h) e) = e2 \<rbrakk> \<Longrightarrow> high_invariant_is_2 (xs e2) (high e2)"
@@ -337,14 +337,8 @@ apply(simp_all add: mk_rec_def loop_update_action_pre_def invariant_low_to_j_is_
 
 text\<open>The difference between high and i will never increase and will be decreased by loop_update_action\<close>
 lemma termination_loop_update_action:
-"\<lbrakk>init_env l = e; high e = h1; i e = j1; h1 > j1 ; snd (run_state (loop_update_action l j1 h1) e) = e2; high e2 = h2; i e2 = j2\<rbrakk> \<Longrightarrow> (h2 - j2) \<le> (h1 - j1)"
-  apply(simp_all add: snd_def init_env_def loop_update_action_def)
-  apply(simp_all only: inc_lowbound_def dec_highbound_def inc_index_def)
-  apply(simp_all only: get_low_def put_xs_def get_def put_def put_i_def set_xs_def set_i_def put_low_def set_low_def put_high_def)
-  apply(simp_all only: swap_def set_high_def)
-  sledgehammer
-  sorry
-
+"\<lbrakk>(mk_rec arr l j h) = e; loop_update_action_pre e; snd(run_state (loop_update_action arr j h) e) = e2 \<rbrakk> \<Longrightarrow> (high e2 - i e2) < (high e - i e)"
+  using loop_update_action_post_def loop_update_action_prepost by blast
 
 
 end
