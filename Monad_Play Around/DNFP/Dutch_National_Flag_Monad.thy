@@ -168,6 +168,12 @@ text\<open>This can be used in the other pre and post-conditions for the methods
 subsection\<open>Pre- and Postconditions\<close>
 
 subsubsection\<open>Pre-conditions\<close>
+
+definition init_loop_pre where
+"init_loop_pre e \<equiv> high e > i e 
+                  \<and> length (xs e) > (Suc 0)"
+
+
 definition loop_update_action_pre where
 "loop_update_action_pre e \<equiv> high e > i e 
                               \<and> length (xs e) > (Suc 0)
@@ -196,6 +202,9 @@ definition inc_index_pre where
                               \<and> arr!j = 1"
 
 subsubsection\<open>Post-conditions\<close>
+definition init_loop_post where 
+"init_loop_post e e'\<equiv> e = e'"
+
 definition inc_lowbound_post where 
 "inc_lowbound_post e e'\<equiv> high e = high e'
                           \<and> low e < low e'
@@ -340,5 +349,14 @@ lemma termination_loop_update_action:
 "\<lbrakk>(mk_rec arr l j h) = e; loop_update_action_pre e; snd(run_state (loop_update_action arr j h) e) = e2 \<rbrakk> \<Longrightarrow> (high e2 - i e2) < (high e - i e)"
   using loop_update_action_post_def loop_update_action_prepost by blast
 
+
+subsection\<open>Init_loop\<close>
+lemma init_loop_prepost: "\<lbrakk>init_loop_pre e; snd(run_state (init_loop) e) = e2\<rbrakk> \<Longrightarrow> init_loop_post e e2"
+  by(simp_all add: init_loop_pre_def snd_def init_loop_def init_loop_post_def get_xs_def get_i_def get_def get_high_def return_def)
+
+subsubsection\<open>Invariants\<close>
+lemma init_loop_inv: "\<lbrakk>init_loop_pre e; invariant_low_to_j_is_1 (xs e) (low e) (i e); high_invariant_is_2 (xs e) (high e);
+                        low_invariant_is_0 (xs e) (low e); snd(run_state (init_loop) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2) \<and> low_invariant_is_0 (xs e2) (low e2) \<and> high_invariant_is_2 (xs e2) (high e2)"
+  by (metis init_loop_post_def init_loop_prepost)
 
 end
