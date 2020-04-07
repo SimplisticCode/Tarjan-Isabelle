@@ -166,6 +166,8 @@ definition invariants where
 text\<open>This can be used in the other pre and post-conditions for the methods inside loop_update_actions\<close>
 
 subsection\<open>Pre- and Postconditions\<close>
+
+subsubsection\<open>Pre-conditions\<close>
 definition loop_update_action_pre where
 "loop_update_action_pre e \<equiv> high e > i e 
                               \<and> length (xs e) > (Suc 0)
@@ -186,12 +188,14 @@ definition inc_lowbound_pre where
 
 definition dec_highbound_pre where 
 "dec_highbound_pre arr l j h \<equiv> loop_update_action_pre (mk_rec arr l j h)  
-                              \<and> arr!j > 1"
+                              \<and> arr!j > 1
+                              \<and> arr!h > 2"
 
 definition inc_index_pre where 
 "inc_index_pre arr l j h \<equiv> loop_update_action_pre (mk_rec arr l j h) 
                               \<and> arr!j = 1"
 
+subsubsection\<open>Post-conditions\<close>
 definition inc_lowbound_post where 
 "inc_lowbound_post e e'\<equiv> high e = high e'
                           \<and> low e < low e'
@@ -203,6 +207,7 @@ definition dec_highbound_post where
                               \<and> high e = Suc (high e') 
                               \<and> low e = low e'
                               \<and> i e = i e'
+                              \<and> (xs e')!(high e) > 1
                               \<and> loop_update_action_post e e'"
 
 definition add_high_post where 
@@ -214,56 +219,11 @@ definition add_high_post where
 
 definition inc_index_post where 
 "inc_index_post e e' \<equiv> high e = high e' 
-                       \<and> low e = low e'
-                       \<and> i e < i e'
-                       \<and> invariants (xs e') (low e') (i e') (high e')"
+                      \<and> low e = low e'
+                      \<and> Suc(i e) = i e'
+                      \<and> loop_update_action_post e e'"
 
-definition inc_index_post1 where 
-"inc_index_post1 e e' \<equiv> high e = high e' 
-                       \<and> low e = low e'
-                       \<and> i e < i e'
-                       \<and> invariants1 (xs e') (low e') (i e') (high e')"
-
-section\<open>Simple pre- and post conditions\<close>
-
-
-definition dec_highbound_simple_pre where
-"dec_highbound_simple_pre l j h \<equiv> h < length l
-                                    \<and> j < h  
-                                    \<and> l!j > 1"
-definition dec_highbound_simple_post where 
-"dec_highbound_simple_post e e' \<equiv> length (xs e) > high e' 
-                              \<and> high e > high e' 
-                              \<and> low e = low e'
-                              \<and> i e = i e' 
-                              \<and> length (xs e) = length (xs e')"
-
-
-definition inc_lowbound_simple_pre where 
-"inc_lowbound_simple_pre l j h \<equiv> h < length l
-                                    \<and> j < h  
-                                    \<and> l!j < 1"
-
-definition inc_lowbound_simple_post where 
-"inc_lowbound_simple_post e e' \<equiv> length (xs e) > high e' 
-                              \<and> high e = high e' 
-                              \<and> low e < low e'
-                              \<and> i e < i e' 
-                              \<and> high e - i e > high e' - i e' 
-                              \<and> length (xs e) = length (xs e')"
-
-
-text\<open>This is a very simple precondition of index_j. It does not contain any invariants\<close>
-definition inc_index_simple_pre where
-"inc_index_simple_pre j h \<equiv> j < h"
-
-definition inc_index_post_simple where 
-"inc_index_post_simple e e' \<equiv> high e = high e' 
-                       \<and> low e = low e'
-                       \<and> i e < i e'
-                       \<and> high e - i e > high e' - i e' 
-                       \<and> xs e = xs e'"
-
+section\<open>Lemmators\<close>
 subsection\<open>Inc_lowbound Invariants\<close>
 text\<open>Pre and post-condition\<close>
 lemma inc_lowbound_prepost: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; low_invariant_is_0 arr l;snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> inc_lowbound_post e e2"
@@ -287,8 +247,12 @@ apply(simp_all add: inc_lowbound_pre_def mk_rec_def loop_update_action_pre_def i
   apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
   using less_Suc_eq by (auto)
 
+lemma inc_lowbound_inv: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; invariant_low_to_j_is_1 (xs e) (low e) (i e); high_invariant_is_2 (xs e) (high e);
+                        low_invariant_is_0 (xs e) (low e); snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2) \<and> low_invariant_is_0 (xs e2) (low e2) \<and> high_invariant_is_2 (xs e2) (high e2)"
+  using inc_lowbound_invariantBlue inc_lowbound_invariantRed inc_lowbound_invariantWhite by blast
+
 subsection\<open>Dec_highbound Invariants\<close>
-lemma dec_highbound_prepost: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> dec_highbound_post e e2"
+lemma dec_highbound_prepost[simp]: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> dec_highbound_post e e2"
   apply(simp_all add: dec_highbound_pre_def mk_rec_def loop_update_action_pre_def dec_highbound_post_def snd_def loop_update_action_post_def dec_highbound_def)
   apply(simp_all add: put_high_def add_high_def set_high_def put_xs_def put_def get_def swap_def set_xs_def)
   by(auto)
@@ -307,44 +271,69 @@ apply(simp_all add: dec_highbound_pre_def mk_rec_def loop_update_action_pre_def 
 lemma dec_highbound_invariantBlue: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; high_invariant_is_2 (xs e) (high e);snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> high_invariant_is_2 (xs e2) (high e2)"
 apply(simp_all add: dec_highbound_pre_def mk_rec_def loop_update_action_pre_def high_invariant_is_2_def snd_def loop_update_action_post_def dec_highbound_def)
   apply(simp_all add: put_high_def add_high_def set_high_def put_xs_def put_def get_def swap_def set_xs_def)
-  sorry
+  by(auto)
+
+lemma dec_highbound_inv: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; invariant_low_to_j_is_1 (xs e) (low e) (i e); high_invariant_is_2 (xs e) (high e);
+                        low_invariant_is_0 (xs e) (low e); snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2) \<and> low_invariant_is_0 (xs e2) (low e2) \<and> high_invariant_is_2 (xs e2) (high e2)"
+  using dec_highbound_invariantBlue dec_highbound_invariantRed dec_highbound_invariantWhite by blast
 
 subsection\<open>Inc_index Invariants\<close>
-
-text\<open>This is the same as above, but it contains the invariants that includes some universal quantifier\<close>
-lemma inc_index_j_simple_aux: "\<lbrakk>inc_index_simple_pre j1 h; i e = j1 ; high e = h; low_invariant_is_0 (xs e) (low e); 
-     high_invariant_is_2 (xs e) (high e); invariant_low_to_j_is_1 (xs e) (low e) (i e);
-     snd(run_state (inc_index j1) e) = e2 \<rbrakk> \<Longrightarrow> inc_index_post_simple e e2 \<Longrightarrow> low_invariant_is_0 (xs e2) (low e2) \<Longrightarrow> high_invariant_is_2 (xs e2) (high e2)"
-  by(simp_all add: inc_index_simple_pre_def snd_def inc_index_def put_i_def put_def set_i_def inc_index_post_simple_def get_def)
-
-text\<open>This is the proof of Inc Index that it preserves the invariants\<close>
-lemma inc_index_j: "\<lbrakk>inc_index_pre l j e n; xs e = l; i e = j; snd(run_state (inc_index j) e) = e2\<rbrakk> \<Longrightarrow> inc_index_post e e2"
-  apply(simp_all add: snd_def inc_index_def inc_index_post_def inc_index_pre_def loop_update_action_pre_def)
+lemma inc_index_prepost: "\<lbrakk>inc_index_pre arr l j h;  (mk_rec arr l j h) = e; snd(run_state (inc_index j) e) = e2\<rbrakk> \<Longrightarrow> inc_index_post e e2"
+  apply(simp_all add: snd_def mk_rec_def inc_index_def inc_index_post_def inc_index_pre_def loop_update_action_pre_def loop_update_action_post_def)
   apply(simp_all add: invariants_def low_invariant_is_0_def invariant_low_to_j_is_1_def high_invariant_is_2_def put_i_def get_def set_i_def put_def)
-  using less_Suc_eq by (force)
+  by (auto)
+
+subsubsection\<open>Invariants\<close>
+lemma inc_index_invariantRed: "\<lbrakk>inc_index_pre arr l j h; (mk_rec arr l j h) = e; low_invariant_is_0 (xs e) (low e);snd(run_state (inc_index j) e) = e2 \<rbrakk> \<Longrightarrow> low_invariant_is_0 (xs e2) (low e2)"
+apply(simp_all add: inc_index_def mk_rec_def loop_update_action_pre_def low_invariant_is_0_def snd_def loop_update_action_post_def inc_lowbound_def)
+  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
+  by (auto)
+
+lemma inc_index_invariantBlue: "\<lbrakk>inc_index_pre arr l j h; (mk_rec arr l j h) = e; high_invariant_is_2 (xs e) (high e);snd(run_state (inc_index j) e) = e2 \<rbrakk> \<Longrightarrow> high_invariant_is_2 (xs e2) (high e2)"
+apply(simp_all add: inc_index_def mk_rec_def loop_update_action_pre_def high_invariant_is_2_def snd_def loop_update_action_post_def inc_lowbound_def)
+  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
+  by (auto)
+
+lemma inc_index_invariantWhite: "\<lbrakk>inc_index_pre arr l j h; (mk_rec arr l j h) = e; invariant_low_to_j_is_1 (xs e) (low e) (i e);snd(run_state (inc_index j) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2)"
+apply(simp_all add: inc_index_def mk_rec_def loop_update_action_pre_def invariant_low_to_j_is_1_def snd_def loop_update_action_post_def inc_lowbound_def)
+  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
+  by (metis One_nat_def inc_index_pre_def less_Suc_eq select_convs(2) select_convs(3) select_convs(4))
+
+lemma inc_index_inv: "\<lbrakk>inc_index_pre arr l j h; (mk_rec arr l j h) = e; invariant_low_to_j_is_1 (xs e) (low e) (i e); high_invariant_is_2 (xs e) (high e);
+                        low_invariant_is_0 (xs e) (low e); snd(run_state (inc_index j) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2) \<and> low_invariant_is_0 (xs e2) (low e2) \<and> high_invariant_is_2 (xs e2) (high e2)"
+  using inc_index_invariantBlue inc_index_invariantRed inc_index_invariantWhite by blast
 
 subsection\<open>Loop update action\<close>
 lemma loop_update_action_prepost: "\<lbrakk>(mk_rec arr l j h) = e; loop_update_action_pre e; snd(run_state (loop_update_action arr j h) e) = e2 \<rbrakk> \<Longrightarrow> loop_update_action_post e e2"
   apply(simp_all add:  mk_rec_def loop_update_action_pre_def snd_def loop_update_action_post_def loop_update_action_def)
-  apply(simp_all only: inc_lowbound_def dec_highbound_def inc_index_def get_low_def return_def put_high_def set_high_def put_xs_def put_def get_def swap_def)
-  apply(simp_all only: set_low_def put_low_def set_xs_def put_i_def add_high_def put_def get_def set_i_def put_xs_def)
-  sledgehammer
+  apply(simp_all only: inc_lowbound_def dec_highbound_def inc_index_def get_low_def put_high_def set_high_def put_xs_def put_def get_def swap_def)
+  apply(simp_all only: set_low_def put_low_def set_xs_def put_i_def add_high_def put_def get_def set_i_def put_xs_def swap_def)
+  apply(simp only: return_def)
+  by(auto)
 
 subsubsection\<open>Invariants\<close>
-lemma  loop_update_action_invariantRed: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; low_invariant_is_0 (xs e) (low e);snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> low_invariant_is_0 (xs e2) (low e2)"
-apply(simp_all add: inc_lowbound_pre_def mk_rec_def loop_update_action_pre_def low_invariant_is_0_def snd_def loop_update_action_post_def inc_lowbound_def)
-  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
-  using less_Suc_eq by (auto)
 
-lemma  loop_update_action_invariantBlue: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; high_invariant_is_2 (xs e) (high e);snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> high_invariant_is_2 (xs e2) (high e2)"
-apply(simp_all add: inc_lowbound_pre_def mk_rec_def loop_update_action_pre_def high_invariant_is_2_def snd_def loop_update_action_post_def inc_lowbound_def)
-  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
-  using less_Suc_eq by (auto)
+text\<open>I think I should be able to use the lemmators defined above\<close>
+lemma  loop_update_action_invariantRed: "\<lbrakk>(mk_rec arr l j h) = e; loop_update_action_pre e;  low_invariant_is_0 (xs e) (low e);snd(run_state (loop_update_action arr j h) e) = e2 \<rbrakk> \<Longrightarrow> low_invariant_is_0 (xs e2) (low e2)"
+  apply(simp_all add: mk_rec_def loop_update_action_pre_def low_invariant_is_0_def snd_def loop_update_action_post_def loop_update_action_def)
+  apply(simp_all only: inc_lowbound_def dec_highbound_def inc_index_def get_low_def put_high_def set_high_def put_xs_def put_def get_def swap_def)
+   apply(simp_all only: set_low_def put_low_def set_xs_def put_i_def add_high_def put_def get_def set_i_def put_xs_def swap_def)
+  sorry
 
-lemma  loop_update_action_invariantWhite: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; invariant_low_to_j_is_1 (xs e) (low e) (i e);snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2)"
-apply(simp_all add: inc_lowbound_pre_def mk_rec_def loop_update_action_pre_def invariant_low_to_j_is_1_def snd_def loop_update_action_post_def inc_lowbound_def)
-  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
-  using less_Suc_eq by (auto)
+lemma  loop_update_action_invariantBlue: "\<lbrakk>(mk_rec arr l j h) = e; loop_update_action_pre e;  high_invariant_is_2 (xs e) (high e);snd(run_state (loop_update_action arr j h) e) = e2 \<rbrakk> \<Longrightarrow> high_invariant_is_2 (xs e2) (high e2)"
+apply(simp_all add: mk_rec_def loop_update_action_pre_def high_invariant_is_2_def snd_def loop_update_action_post_def loop_update_action_def)
+  apply(simp_all only: inc_lowbound_def dec_highbound_def inc_index_def get_low_def put_high_def set_high_def put_xs_def put_def get_def swap_def)
+  apply(simp_all only: set_low_def put_low_def set_xs_def put_i_def add_high_def put_def get_def set_i_def put_xs_def swap_def)
+  apply(simp only: return_def)
+  sorry
+
+lemma  loop_update_action_invariantWhite: "\<lbrakk>(mk_rec arr l j h) = e; loop_update_action_pre e;  invariant_low_to_j_is_1 (xs e) (low e) (i e);snd(run_state (loop_update_action arr j h) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2)"
+apply(simp_all add: mk_rec_def loop_update_action_pre_def invariant_low_to_j_is_1_def snd_def loop_update_action_post_def loop_update_action_def)
+  apply(simp_all only: inc_lowbound_def dec_highbound_def inc_index_def get_low_def put_high_def set_high_def put_xs_def put_def get_def swap_def)
+   apply(simp_all only: set_low_def put_low_def set_xs_def put_i_def add_high_def put_def get_def set_i_def put_xs_def swap_def)
+  apply(simp only: return_def)
+  sorry
+
 
 text\<open>The difference between high and i will never increase and will be decreased by loop_update_action\<close>
 lemma termination_loop_update_action:
@@ -356,37 +345,6 @@ lemma termination_loop_update_action:
   sledgehammer
   sorry
 
-
-lemma distinct_dnfp[simp]:
-  "distinct(dnfp n xs k j k) = distinct xs"
-   apply(simp)
-   apply(simp add: swap_def)
-  sorry
-
-fun dnfp_alt:: "nat array \<Rightarrow> nat array \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat list" where
-"dnfp_alt [] s _ _ _ _ = s"|
-"dnfp_alt (x#xs) s low high i mid = (if high > i then (if s!i < mid then (dnfp_alt xs (swap s i low) (Suc low) high (Suc i) mid)
-                                      else (if s!i > mid then (dnfp_alt xs (swap s i (high-1)) low (high-1) i mid)
-                                       else (dnfp_alt xs s low high (Suc i) mid))) else s)"
-
-
-text\<open>How do I evaluate this - where I define a variable/constant and use it in a function call\<close>
-value\<open>(xs = [0,0,2,2,1] \<Longrightarrow> (dnfp (length xs) xs 0 (length xs) 1 = [0,0,1,2,2]))\<close>
-
-
-value\<open>(dnfp 5 [0,0,2,2,1] 0 5 1) = [0,0,1,2,2]\<close>
-value\<open>(dnfp 8 [1,0,2,0,2,0,2,1] 0 8 1) = [0,0,0,1,1,2,2,2]\<close>
-value\<open>sorted(dnfp 8 [1,0,2,0,2,0,2,1] 0 8 1)\<close>
-value\<open>sorted(dnfp 7 [1,0,2,0,2,2,1] 0 7 1 )\<close>
-value\<open>sorted(dnfp 8 [1,0,2,0,2,2,1,0] 0 8 1 )\<close>
-value\<open>(dnfp 8 [1,0,2,0,2,2,1,0] 0 8 1)\<close>
-
-value\<open>(dnfp1 5 [0,0,2,2,1] 0 5 1) = [0,0,1,2,2]\<close>
-value\<open>(dnfp1 8 [1,0,2,0,2,0,2,1] 0 8 1) = [0,0,0,1,1,2,2,2]\<close>
-value\<open>sorted(dnfp1 8 [1,0,2,0,2,0,2,1] 0 8 1)\<close>
-value\<open>sorted(dnfp1 7 [1,0,2,0,2,2,1] 0 7 1 )\<close>
-value\<open>sorted(dnfp1 8 [1,0,2,0,2,2,1,0] 0 8 1 )\<close>
-value\<open>(dnfp1 8 [1,0,2,0,2,2,1,0] 0 8 1)\<close>
 
 
 end
