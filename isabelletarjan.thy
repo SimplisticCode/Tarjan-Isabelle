@@ -32,6 +32,9 @@ text\<open>Helper methods for manipulating the environment fields hided in the M
 definition return:: "'a \<Rightarrow> ('b, 'a) state" where "return = State_Monad.return"
 definition get:: "('a env, 'a env) state" where "get = State (\<lambda>x. (x,x))"
 definition put:: "'a env \<Rightarrow> ('a env, unit) state" where "put x = State (\<lambda>_. ((),x))"
+
+definition get_gen:: "('a env \<Rightarrow> 'b) \<Rightarrow> ('a env, 'b) state" where "get_gen acc = do { x \<leftarrow> get; return (acc  x)}"
+
 definition get_black:: "('a env, 'a set) state" where "get_black = do { x \<leftarrow> get; return (black  x) }" 
 definition get_gray:: "('a env, 'a set) state" where "get_gray = do { x \<leftarrow> get; return (gray x) }" 
 definition get_stack:: "('a env, 'a list) state" where "get_stack = do { x \<leftarrow> get; return (stack x) }" 
@@ -229,42 +232,42 @@ text \<open>
 
 definition insert_black:: "'v \<Rightarrow> ('v env, unit) state" where
 "insert_black x \<equiv> do{
-       b \<leftarrow> get_black;
+       b \<leftarrow> get_gen black;
        b \<leftarrow> return (insert x b);
        put_black b
     }"
 
 definition insert_sccs:: "'v list \<Rightarrow> ('v env, unit) state" where
 "insert_sccs x \<equiv> do{
-       scc \<leftarrow> get_sccs;
+       scc \<leftarrow> get_gen sccs;
        scc \<leftarrow> return (insert (set x) scc);
        put_sccs scc
     }"
 
 definition insert_gray:: "'v \<Rightarrow> ('v env, unit) state" where
 "insert_gray x \<equiv> do{
-       g \<leftarrow> get_gray;
+       g \<leftarrow> get_gen gray;
        g \<leftarrow> return (insert x g);
        put_gray g
     }"
 
 definition insert_stack:: "'v  \<Rightarrow> ('v env, unit) state" where
 "insert_stack x \<equiv> do {
-       st \<leftarrow> get_stack;
+       st \<leftarrow> get_gen stack;
        st \<leftarrow> return (x # st);
        put_stack st
     }"
 
 definition count_up_sn:: "('v env, unit) state" where
 "count_up_sn \<equiv> do {
-      sn \<leftarrow> get_sn;
+      sn \<leftarrow> get_gen sn;
       put_sn (sn + 1)
 }"
 
 definition update_num:: "'v \<Rightarrow> ('v env, unit) state" where
 "update_num x \<equiv> do {
-      num \<leftarrow> get_num;
-      sn \<leftarrow> get_sn;
+      num \<leftarrow> get_gen num;
+      sn \<leftarrow> get_gen sn;
       num \<leftarrow> return (num (x := int(sn)));
       put_num num
 }"
@@ -285,10 +288,29 @@ text \<open>
 definition add_black:: "'v \<Rightarrow> ('v env, unit) state" where
   "add_black x =   do{
                            insert_black x;
-                           gr \<leftarrow> get_gray;
+                           gr \<leftarrow> get_gen gray;
                            gr \<leftarrow> return (gr - {x});
                            put_gray gr
                         }"
+
+definition update_list where
+"update_list l \<equiv>    
+  do{   
+      n \<leftarrow> get_gen num;
+      let n1 = set_infty l n;
+      put_num n1  
+  }"
+
+definition update_env  where
+  "update_env x =   
+  do{
+      insert_black x;
+      st \<leftarrow> get_gen stack;
+      let (l,r) = split_list x st;
+      insert_sccs l;
+      put_stack r;
+      update_list l
+    }"
 
 section \<open>Main functions used for Tarjan's algorithms\<close>
 
@@ -311,31 +333,23 @@ function (domintros) dfs1 and dfs where
   "dfs1 x = do {
     add_stack_incr x;
     let n1 = dfs (successors x);
-    sn \<leftarrow> get_sn;
-    if n1 < int sn then do{
+    snum \<leftarrow> get_gen sn;
+    if int n1 < int snum then do{
       add_black x;
-      return n1
+      n1
     }
     else do{
-      st \<leftarrow> get_stack;
-      insert_black x;
-      let (l,r) = split_list x st;
-      insert_sccs l;
-      put_stack r;
-      num \<leftarrow> get_num;
-      num \<leftarrow> set_infty l num;
-      put_num num;  
-      return \<infinity>
+      update_env x;
+      \<infinity>
     }
   }"
 | "dfs roots = do{
-    a \<leftarrow> (if roots = {} then (\<infinity>)
+    a \<leftarrow> (if roots = {} then (return \<infinity>)
     else do {
-       x \<leftarrow> (SOME x. x \<in> roots);
+       let x = (SOME x. x \<in> roots);
        num \<leftarrow> get_num;
-       let res1 = (if (num x \<noteq> -1) then (num x) else (dfs1 x));
-       let y = roots - {x};
-       let res2 =  dfs y;
+       let res1 = (if num x > 0 then (num x) else (dfs1 x));
+       let res2 = dfs (roots - {x});
        (min res1 res2)
     });
     return a
@@ -429,7 +443,7 @@ text \<open>
 lemma dfs_num_defined_monad:
   "\<lbrakk>dfs1_dfs_dom (Inl (x,e)); num (snd (run_state(dfs1 x) e)) v = -1\<rbrakk> \<Longrightarrow>
     num e v = -1"
-  "\<lbrakk>dfs1_dfs_dom (Inr (roots,e)); num (snd (run_state(dfs roots) e)) v = -1\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>dfs_dfs_dom (Inr (roots,e)); num (snd (run_state(dfs roots) e)) v = -1\<rbrakk> \<Longrightarrow>
     num e v = -1"
   sorry
 
