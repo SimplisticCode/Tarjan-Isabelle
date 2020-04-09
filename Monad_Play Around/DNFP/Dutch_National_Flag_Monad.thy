@@ -150,6 +150,15 @@ definition invariant_low_to_j_is_1 where
 definition high_invariant_is_2 where
 "high_invariant_is_2 arr h\<equiv> (\<forall>x. x \<ge> h \<longrightarrow> arr!x = 2)"
 
+definition low_invariant_is_0_Env where
+"low_invariant_is_0_Env e \<equiv> (\<forall>x. x < (low e) \<longrightarrow> (xs e)!x = 0)"
+
+definition invariant_low_to_j_is_1_Env where
+"invariant_low_to_j_is_1_Env e \<equiv> (\<forall>x. (x \<ge> (low e) \<and> x < (i e)) \<longrightarrow> (xs e)!x = 1)"
+
+definition high_invariant_is_2_Env where
+"high_invariant_is_2_Env e\<equiv> (\<forall>x. x \<ge> (high e) \<longrightarrow> (xs e)!x = 2)"
+
 definition invariants where
 "invariants arr l j h\<equiv> low_invariant_is_0 arr l
               \<and> invariant_low_to_j_is_1 arr l j
@@ -165,13 +174,9 @@ definition dnfp_pre where
               \<and> i e \<ge> low e 
               \<and> length (xs e) \<ge> high e"
 
-definition init_loop_pre where
-"init_loop_pre e \<equiv> high e > i e 
-                  \<and> length (xs e) > (Suc 0)"
-
-
 definition loop_update_action_pre where
-"loop_update_action_pre e \<equiv> init_loop_pre e
+"loop_update_action_pre e \<equiv>  high e > i e
+                              \<and> length (xs e) > (Suc 0)
                               \<and> length (xs e) \<ge> high e
                               \<and> low e < high e
                               \<and> low e \<le> i e"
@@ -184,26 +189,23 @@ definition loop_update_action_post where
                                 \<and> high e - i e > high e' - i e'"
 
 definition inc_lowbound_pre where 
-"inc_lowbound_pre arr l j h\<equiv> loop_update_action_pre (mk_rec arr l j h)
-                            \<and> arr!j < 1"
+"inc_lowbound_pre \<equiv> \<lambda>e. loop_update_action_pre e
+                            \<and> (xs e)!(i e) < 1"
 
 definition dec_highbound_pre where 
-"dec_highbound_pre arr l j h \<equiv> loop_update_action_pre (mk_rec arr l j h)  
-                              \<and> arr!j = 2
-                              \<and> arr!h = 2"
+"dec_highbound_pre \<equiv> \<lambda>e. loop_update_action_pre e 
+                              \<and> (xs e)!(i e) = 2
+                              \<and> (xs e)!(high e) = 2"
 
 definition inc_index_pre where 
-"inc_index_pre arr l j h \<equiv> loop_update_action_pre (mk_rec arr l j h) 
-                              \<and> arr!j = 1"
+"inc_index_pre  \<equiv> \<lambda>e. loop_update_action_pre e
+                      \<and> (xs e)!(i e) = 1"
 
 definition dnfp_pre_aux where
 "dnfp_pre_aux e \<equiv> 
     (Suc 0)  < length (xs e) \<longrightarrow> (inc_index_pre (xs e) (low e) (i e) (high e) \<or> dec_highbound_pre (xs e) (low e) (i e) (high e) \<or> inc_lowbound_pre (xs e) (low e) (i e) (high e)) "
 
 subsubsection\<open>Post-conditions\<close>
-definition init_loop_post where 
-"init_loop_post e e'\<equiv> e = e'"
-
 definition inc_lowbound_post where 
 "inc_lowbound_post e e'\<equiv> high e = high e'
                           \<and> low e < low e'
@@ -231,7 +233,11 @@ definition dnfp_post where
 section\<open>Lemmators\<close>
 subsection\<open>Hoare proofs\<close>
 
-lemma inc_spec: "spec (GG )"
+
+
+definition inc_lowbound_post_hoare:: "env \<Rightarrow> env \<Rightarrow> bool" where "inc_lowbound_post_hoare s1 s2 = (x_S1 s = y_S1 s \<and> x_S1 s = z_S1 s)"
+
+lemma inc_spec: "spec inc_lowbound_pre inc_lowbound (GG )"
 
 subsection\<open>Inc_lowbound Invariants\<close>
 text\<open>Pre and post-condition\<close>
