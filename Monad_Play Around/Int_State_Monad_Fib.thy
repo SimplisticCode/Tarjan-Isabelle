@@ -88,15 +88,13 @@ lemma fib_m_main: "snd (run_state (monfibacc n 0) 1) = fib n"
     apply(simp add: snd_def put_def get_def return_def)
     apply(simp add: snd_def put_def get_def return_def)
     apply(simp only: monfib_aux1)
-  apply(simp)
-  done
+  by(simp)
 
 lemma fib_mon_main: "snd (run_state (monfibacc n a) b) = fibacc n a b"
   apply(simp add: snd_def put_def get_def return_def)
   apply (induction n arbitrary: a b rule:fib.induct)
   apply(simp add: snd_def put_def get_def return_def)
   apply(simp)
-  apply(simp_all add: snd_def put_def get_def return_def)
-  done
+  by(simp_all add: snd_def put_def get_def return_def)
 
 end

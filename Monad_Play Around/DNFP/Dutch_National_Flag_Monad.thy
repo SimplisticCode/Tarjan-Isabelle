@@ -16,8 +16,7 @@ record env =
   i    :: "nat"
   xs   :: "nat array"
   
-(* update functions *)
-
+subsection\<open>update functions\<close>
 definition high_Env:: "env \<Rightarrow> nat \<Rightarrow> env" where "high_Env s v = s \<lparr> high := v \<rparr>"
 definition low_Env:: "env \<Rightarrow> nat \<Rightarrow> env" where "low_Env s v = s \<lparr> low := v \<rparr>"
 definition i_Env:: "env \<Rightarrow> nat \<Rightarrow> env" where "i_Env s v = s \<lparr> i := v \<rparr>"
@@ -159,6 +158,11 @@ definition invariant_low_to_j_is_1_Env where
 definition high_invariant_is_2_Env where
 "high_invariant_is_2_Env e\<equiv> (\<forall>x. x \<ge> (high e) \<longrightarrow> (xs e)!x = 2)"
 
+definition invariants_Env:: "env \<Rightarrow> bool" where
+"invariants_Env e \<equiv> high_invariant_is_2_Env e
+              \<and> invariant_low_to_j_is_1_Env e
+              \<and> low_invariant_is_0_Env e"
+
 definition invariants where
 "invariants arr l j h\<equiv> low_invariant_is_0 arr l
               \<and> invariant_low_to_j_is_1 arr l j
@@ -188,9 +192,25 @@ definition loop_update_action_post where
                                 \<and> i e \<le> i e'
                                 \<and> high e - i e > high e' - i e'"
 
-definition inc_lowbound_pre where 
-"inc_lowbound_pre \<equiv> \<lambda>e. loop_update_action_pre e
-                            \<and> (xs e)!(i e) < 1"
+definition inc_lowbound_pre:: "env \<Rightarrow> env \<Rightarrow> bool" where 
+"inc_lowbound_pre e s \<equiv> s = e
+                        \<and> loop_update_action_pre s
+                        \<and> (xs s)!(i s) < 1"
+
+definition inc_lowbound_inv1 :: "env \<Rightarrow> bool" where
+"inc_lowbound_inv1 s \<equiv> loop_update_action_pre s
+                        \<and> (xs s)!(i s) < 1
+                        \<and> low_invariant_is_0_Env s"
+
+definition inc_lowbound_inv2 :: "env \<Rightarrow> bool" where
+"inc_lowbound_inv2 s \<equiv> loop_update_action_pre s
+                        \<and> (xs s)!(i s) < 1
+                        \<and> invariant_low_to_j_is_1_Env s"
+
+definition inc_lowbound_inv3 :: "env \<Rightarrow> bool" where
+"inc_lowbound_inv3 s \<equiv> loop_update_action_pre s
+                        \<and> (xs s)!(i s) < 1
+                        \<and> high_invariant_is_2_Env s"
 
 definition dec_highbound_pre where 
 "dec_highbound_pre \<equiv> \<lambda>e. loop_update_action_pre e 
@@ -201,12 +221,8 @@ definition inc_index_pre where
 "inc_index_pre  \<equiv> \<lambda>e. loop_update_action_pre e
                       \<and> (xs e)!(i e) = 1"
 
-definition dnfp_pre_aux where
-"dnfp_pre_aux e \<equiv> 
-    (Suc 0)  < length (xs e) \<longrightarrow> (inc_index_pre (xs e) (low e) (i e) (high e) \<or> dec_highbound_pre (xs e) (low e) (i e) (high e) \<or> inc_lowbound_pre (xs e) (low e) (i e) (high e)) "
-
 subsubsection\<open>Post-conditions\<close>
-definition inc_lowbound_post where 
+definition inc_lowbound_post:: "env \<Rightarrow> env \<Rightarrow> bool" where 
 "inc_lowbound_post e e'\<equiv> high e = high e'
                           \<and> low e < low e'
                           \<and> loop_update_action_post e e'
@@ -233,38 +249,36 @@ definition dnfp_post where
 section\<open>Lemmators\<close>
 subsection\<open>Hoare proofs\<close>
 
-
-
-definition inc_lowbound_post_hoare:: "env \<Rightarrow> env \<Rightarrow> bool" where "inc_lowbound_post_hoare s1 s2 = (x_S1 s = y_S1 s \<and> x_S1 s = z_S1 s)"
-
-lemma inc_spec: "spec inc_lowbound_pre inc_lowbound (GG )"
-
-subsection\<open>Inc_lowbound Invariants\<close>
-text\<open>Pre and post-condition\<close>
-lemma inc_lowbound_prepost: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; low_invariant_is_0 arr l;snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> inc_lowbound_post e e2"
-  apply(simp_all add: inc_lowbound_pre_def init_loop_pre_def mk_rec_def loop_update_action_pre_def inc_lowbound_post_def snd_def loop_update_action_post_def inc_lowbound_def)
-  apply(simp_all add: put_xs_def get_gen_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
-  by(auto)
+lemma inc_lowbound_spec: "spec (inc_lowbound_pre e) inc_lowbound (GG (inc_lowbound_post e))"
+  apply(simp_all add: inc_lowbound_def)
+  apply(simp add: inc_lowbound_pre_def loop_update_action_pre_def get_def get_state_def)
+  apply (simp_all add: spec_def  get_def get_state_def return_def put_def put_state_def GG_def)
+  apply(simp_all add: inc_lowbound_pre_def loop_update_action_pre_def inc_lowbound_post_def loop_update_action_post_def swap_def xs_Env_def i_Env_def low_Env_def)
+  by linarith
 
 subsubsection\<open>Invariants\<close>
-lemma inc_lowbound_invariantRed: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; low_invariant_is_0 (xs e) (low e);snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> low_invariant_is_0 (xs e2) (low e2)"
-apply(simp_all add: inc_lowbound_pre_def init_loop_pre_def mk_rec_def loop_update_action_pre_def low_invariant_is_0_def snd_def loop_update_action_post_def inc_lowbound_def)
-  apply(simp_all add: put_xs_def get_gen_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
-  using less_Suc_eq by (auto)
+lemma inc_lowbound_invariantRed: "spec inc_lowbound_inv1 inc_lowbound (GG low_invariant_is_0_Env)"
+  apply(simp_all add: inc_lowbound_def)
+  apply (simp_all add: inc_lowbound_inv1_def loop_update_action_pre_def low_invariant_is_0_Env_def spec_def  get_def get_state_def return_def put_def put_state_def GG_def)
+  apply(simp add: low_Env_def i_Env_def xs_Env_def swap_def)
+  using less_Suc_eq by auto
 
-lemma inc_lowbound_invariantBlue: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; high_invariant_is_2 (xs e) (high e);snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> high_invariant_is_2 (xs e2) (high e2)"
-apply(simp_all add: inc_lowbound_pre_def init_loop_pre_def mk_rec_def loop_update_action_pre_def high_invariant_is_2_def snd_def loop_update_action_post_def inc_lowbound_def)
-  apply(simp_all add: put_xs_def get_gen_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
-  using less_Suc_eq by (auto)
+lemma inc_lowbound_invariantWhite: "spec inc_lowbound_inv2  inc_lowbound (GG invariant_low_to_j_is_1_Env)"
+  apply(simp_all add: inc_lowbound_def)
+  apply (simp_all add: inc_lowbound_inv2_def loop_update_action_pre_def invariant_low_to_j_is_1_Env_def spec_def  get_def get_state_def return_def put_def put_state_def GG_def)
+  apply(simp add: low_Env_def i_Env_def xs_Env_def swap_def)
+  using less_Suc_eq by auto
 
-lemma inc_lowbound_invariantWhite: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; invariant_low_to_j_is_1 (xs e) (low e) (i e);snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2)"
-apply(simp_all add: inc_lowbound_pre_def init_loop_pre_def mk_rec_def loop_update_action_pre_def invariant_low_to_j_is_1_def snd_def loop_update_action_post_def inc_lowbound_def)
-  apply(simp_all add: put_xs_def get_gen_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
-  using less_Suc_eq by (auto)
+lemma inc_lowbound_invariantBlue: "spec inc_lowbound_inv3  inc_lowbound (GG high_invariant_is_2_Env)"
+  apply(simp_all add: inc_lowbound_def)
+  apply (simp_all add: inc_lowbound_inv3_def loop_update_action_pre_def high_invariant_is_2_Env_def spec_def  get_def get_state_def return_def put_def put_state_def GG_def)
+  by(simp add: low_Env_def i_Env_def xs_Env_def swap_def)
 
-lemma inc_lowbound_inv: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; invariant_low_to_j_is_1 (xs e) (low e) (i e); high_invariant_is_2 (xs e) (high e);
-                        low_invariant_is_0 (xs e) (low e); snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2) \<and> low_invariant_is_0 (xs e2) (low e2) \<and> high_invariant_is_2 (xs e2) (high e2)"
-  using inc_lowbound_invariantBlue inc_lowbound_invariantRed inc_lowbound_invariantWhite by blast
+definition inc_lowbound_inv :: "env \<Rightarrow> bool" where
+"inc_lowbound_inv s \<equiv> (inc_lowbound_inv3 s \<and> inc_lowbound_inv2 s \<and> inc_lowbound_inv1 s)"
+
+lemma inc_lowbound_invariants: "spec inc_lowbound_inv  inc_lowbound (GG invariants_Env)"
+  by (metis (mono_tags, lifting) GG_def inc_lowbound_inv_def inc_lowbound_invariantBlue inc_lowbound_invariantRed inc_lowbound_invariantWhite invariants_Env_def spec_def split_def)
 
 subsection\<open>Dec_highbound Invariants\<close>
 lemma dec_highbound_prepost[simp]: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> dec_highbound_post e e2"
