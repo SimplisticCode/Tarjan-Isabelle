@@ -178,12 +178,16 @@ definition dnfp_pre where
               \<and> i e \<ge> low e 
               \<and> length (xs e) \<ge> high e"
 
-definition loop_update_action_pre where
+definition loop_update_action_pre:: "env \<Rightarrow> bool" where
 "loop_update_action_pre e \<equiv>  high e > i e
                               \<and> length (xs e) > (Suc 0)
                               \<and> length (xs e) \<ge> high e
                               \<and> low e < high e
                               \<and> low e \<le> i e"
+
+definition loop_update_action_pre_aux:: "env \<Rightarrow> env \<Rightarrow> bool" where
+"loop_update_action_pre_aux e s \<equiv> s = e
+                              \<and> loop_update_action_pre e"
 
 definition loop_update_action_post where
 "loop_update_action_post e e' \<equiv> length (xs e) = length (xs e')
@@ -236,9 +240,25 @@ definition dec_highbound_inv3 where
                         \<and> (xs e)!(high e) = 2
                         \<and> high_invariant_is_2_Env e"
 
-definition inc_index_pre where 
-"inc_index_pre  \<equiv> \<lambda>e. loop_update_action_pre e
+definition inc_index_pre:: "env \<Rightarrow> env \<Rightarrow> bool" where 
+"inc_index_pre e s \<equiv> e = s 
+                      \<and> loop_update_action_pre e
                       \<and> (xs e)!(i e) = 1"
+
+definition inc_index_inv1:: "env \<Rightarrow> bool" where 
+"inc_index_inv1 e \<equiv> loop_update_action_pre e
+                    \<and> (xs e)!(i e) = 1
+                    \<and> low_invariant_is_0_Env e"
+
+definition inc_index_inv2:: "env \<Rightarrow> bool" where 
+"inc_index_inv2 e \<equiv> loop_update_action_pre e
+                    \<and> (xs e)!(i e) = 1
+                        \<and> invariant_low_to_j_is_1_Env e"
+
+definition inc_index_inv3:: "env \<Rightarrow> bool" where
+"inc_index_inv3 e \<equiv> loop_update_action_pre e
+                    \<and> (xs e)!(i e) = 1
+                    \<and> high_invariant_is_2_Env e"
 
 subsubsection\<open>Post-conditions\<close>
 definition inc_lowbound_post:: "env \<Rightarrow> env \<Rightarrow> bool" where 
@@ -255,7 +275,7 @@ definition dec_highbound_post where
                               \<and> (xs e')!(high e') = 2
                               \<and> loop_update_action_post e e'"
 
-definition inc_index_post where 
+definition inc_index_post:: "env \<Rightarrow> env \<Rightarrow> bool" where 
 "inc_index_post e e' \<equiv> high e = high e' 
                       \<and> low e = low e'
                       \<and> Suc(i e) = i e'
@@ -338,38 +358,54 @@ lemma dec_highbound_invariants: "spec dec_highbound_inv dec_highbound (GG invari
   by (metis (mono_tags, lifting) GG_def dec_highbound_inv_def dec_highbound_invariantBlue dec_highbound_invariantRed dec_highbound_invariantWhite invariants_Env_def spec_def split_def)
 
 subsection\<open>Inc_index Invariants\<close>
-lemma inc_index_prepost: "\<lbrakk>inc_index_pre arr l j h;  (mk_rec arr l j h) = e; snd(run_state (inc_index j) e) = e2\<rbrakk> \<Longrightarrow> inc_index_post e e2"
-  apply(simp_all add: snd_def mk_rec_def init_loop_pre_def inc_index_def inc_index_post_def inc_index_pre_def loop_update_action_pre_def loop_update_action_post_def)
-  apply(simp_all add: invariants_def low_invariant_is_0_def invariant_low_to_j_is_1_def high_invariant_is_2_def put_i_def get_def set_i_def put_def)
-  by (auto)
+
+lemma inc_index_spec: "spec (inc_index_pre e) inc_index (GG (inc_index_post e))"
+  apply(simp_all add: inc_index_def)
+  apply (intro get_rule)
+  apply (simp_all add: spec_def)
+  apply(simp_all add: inc_index_pre_def loop_update_action_pre_def)
+  apply(simp_all add: get_def get_state_def return_def put_def put_state_def GG_def)
+  apply(simp_all add: inc_index_post_def loop_update_action_post_def i_Env_def)
+  by linarith
 
 subsubsection\<open>Invariants\<close>
-lemma inc_index_invariantRed: "\<lbrakk>inc_index_pre arr l j h; (mk_rec arr l j h) = e; low_invariant_is_0 (xs e) (low e);snd(run_state (inc_index j) e) = e2 \<rbrakk> \<Longrightarrow> low_invariant_is_0 (xs e2) (low e2)"
-apply(simp_all add: inc_index_def mk_rec_def loop_update_action_pre_def low_invariant_is_0_def snd_def loop_update_action_post_def inc_lowbound_def)
-  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
-  by (auto)
+lemma inc_index_invariantRed: "spec inc_index_inv1 inc_index (GG low_invariant_is_0_Env)"
+  apply(simp_all add: inc_index_def)
+  apply (simp_all add: spec_def inc_index_inv1_def loop_update_action_pre_def low_invariant_is_0_Env_def)
+  apply(simp_all add:  low_invariant_is_0_Env_def get_def get_state_def return_def put_def put_state_def GG_def)
+  by(simp_all add:  i_Env_def)
 
-lemma inc_index_invariantBlue: "\<lbrakk>inc_index_pre arr l j h; (mk_rec arr l j h) = e; high_invariant_is_2 (xs e) (high e);snd(run_state (inc_index j) e) = e2 \<rbrakk> \<Longrightarrow> high_invariant_is_2 (xs e2) (high e2)"
-apply(simp_all add: inc_index_def mk_rec_def loop_update_action_pre_def high_invariant_is_2_def snd_def loop_update_action_post_def inc_lowbound_def)
-  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
-  by (auto)
+lemma inc_index_invariantWhite: "spec inc_index_inv2 inc_index (GG invariant_low_to_j_is_1_Env)"
+  apply(simp_all add: inc_index_def)
+  apply (simp_all add: spec_def inc_index_inv2_def loop_update_action_pre_def invariant_low_to_j_is_1_Env_def)
+  apply(simp_all add:  invariant_low_to_j_is_1_Env_def get_def get_state_def return_def put_def put_state_def GG_def)
+  apply(simp_all add:  i_Env_def)
+  using less_SucE by auto
 
-lemma inc_index_invariantWhite: "\<lbrakk>inc_index_pre arr l j h; (mk_rec arr l j h) = e; invariant_low_to_j_is_1 (xs e) (low e) (i e);snd(run_state (inc_index j) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2)"
-apply(simp_all add: inc_index_def mk_rec_def loop_update_action_pre_def invariant_low_to_j_is_1_def snd_def loop_update_action_post_def inc_lowbound_def)
-  apply(simp_all add: put_xs_def get_low_def put_i_def swap_def return_def get_def put_def put_low_def set_low_def set_i_def set_xs_def)
-  by (metis One_nat_def inc_index_pre_def less_Suc_eq select_convs(2) select_convs(3) select_convs(4))
+lemma inc_index_invariantBlue: "spec inc_index_inv3 inc_index (GG high_invariant_is_2_Env)"
+  apply(simp_all add: inc_index_def)
+  apply (simp_all add: spec_def inc_index_inv3_def loop_update_action_pre_def high_invariant_is_2_Env_def)
+  apply(simp_all add:  high_invariant_is_2_Env_def get_def get_state_def return_def put_def put_state_def GG_def)
+  by(simp add:  i_Env_def)
 
-lemma inc_index_inv: "\<lbrakk>inc_index_pre arr l j h; (mk_rec arr l j h) = e; invariant_low_to_j_is_1 (xs e) (low e) (i e); high_invariant_is_2 (xs e) (high e);
-                        low_invariant_is_0 (xs e) (low e); snd(run_state (inc_index j) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2) \<and> low_invariant_is_0 (xs e2) (low e2) \<and> high_invariant_is_2 (xs e2) (high e2)"
-  using inc_index_invariantBlue inc_index_invariantRed inc_index_invariantWhite by blast
+definition inc_index_inv :: "env \<Rightarrow> bool" where
+"inc_index_inv s \<equiv> (inc_index_inv3 s \<and> inc_index_inv2 s \<and> inc_index_inv1 s)"
+
+lemma inc_index_invariants: "spec inc_index_inv inc_index (GG invariants_Env)"
+  by (metis (mono_tags, lifting) GG_def inc_index_inv_def inc_index_invariantBlue inc_index_invariantRed inc_index_invariantWhite invariants_Env_def spec_def split_def)
 
 subsection\<open>Loop update action\<close>
-lemma loop_update_action_prepost: "\<lbrakk>(mk_rec arr l j h) = e; loop_update_action_pre e; snd(run_state (loop_update_action arr j h) e) = e2 \<rbrakk> \<Longrightarrow> loop_update_action_post e e2"
-  apply(simp_all add:  mk_rec_def loop_update_action_pre_def init_loop_pre_def snd_def loop_update_action_post_def loop_update_action_def)
-  apply(simp_all only: inc_lowbound_def dec_highbound_def inc_index_def get_gen_def put_high_def set_high_def put_xs_def put_def get_def swap_def)
-  apply(simp_all only: set_low_def put_low_def set_xs_def put_i_def add_high_def put_def get_def set_i_def put_xs_def swap_def)
-  apply(simp only: return_def)
-  by(auto)
+lemma loop_update_action_spec: "spec (loop_update_action_pre_aux e) loop_update_action (GG (loop_update_action_post e))"
+  apply(simp_all add: loop_update_action_def)
+  apply (intro get_rule)
+  apply (intro allI)
+  apply (intro get_rule)
+  apply(simp_all add: loop_update_action_pre_aux_def loop_update_action_pre_def)
+  apply (simp_all add: spec_def)
+  apply(simp_all add: dec_highbound_def inc_index_def inc_lowbound_def add_high_def)
+  apply(simp_all add: get_def get_state_def return_def put_def put_state_def GG_def loop_update_action_post_def)
+  apply(simp_all add: swap_def high_Env_def xs_Env_def low_Env_def  i_Env_def)
+  by linarith
 
 subsubsection\<open>Invariants\<close>
 lemma  loop_update_action_invariantRed: "\<lbrakk>(mk_rec arr l j h) = e; loop_update_action_pre e; inc_lowbound_pre arr l j h \<or> dec_highbound_pre arr l j h \<or> inc_index_pre arr l j h; low_invariant_is_0 (xs e) (low e);snd(run_state (loop_update_action arr j h) e) = e2 \<rbrakk> \<Longrightarrow> low_invariant_is_0 (xs e2) (low e2)"
@@ -385,16 +421,6 @@ text\<open>The difference between high and i will never increase and will be dec
 lemma termination_loop_update_action:
 "\<lbrakk>(mk_rec arr l j h) = e; loop_update_action_pre e; snd(run_state (loop_update_action arr j h) e) = e2 \<rbrakk> \<Longrightarrow> (high e2 - i e2) < (high e - i e)"
   using loop_update_action_post_def loop_update_action_prepost by blast
-
-subsection\<open>Init_loop\<close>
-lemma init_loop_prepost: "\<lbrakk>init_loop_pre e; snd(run_state (init_loop) e) = e2\<rbrakk> \<Longrightarrow> init_loop_post e e2"
-  by(simp_all add: init_loop_pre_def snd_def init_loop_def init_loop_post_def get_gen_def get_def return_def)
-
-subsubsection\<open>Invariants\<close>
-text\<open>This is a very since proof since the method does not change any state at all\<close>
-lemma init_loop_inv: "\<lbrakk>init_loop_pre e; invariant_low_to_j_is_1 (xs e) (low e) (i e); high_invariant_is_2 (xs e) (high e);
-                        low_invariant_is_0 (xs e) (low e); snd(run_state (init_loop) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2) \<and> low_invariant_is_0 (xs e2) (low e2) \<and> high_invariant_is_2 (xs e2) (high e2)"
-  by (metis init_loop_post_def init_loop_prepost)
 
 subsection\<open>DNFP proof\<close>
 lemma dnfp_prepost: "\<lbrakk>(mk_rec arr l j h) = e; dnfp_pre e; dnfp_pre_aux e; length arr = n; snd(run_state (dnfp_mon n) e) = e2 \<rbrakk> \<Longrightarrow> dnfp_post e e2"
