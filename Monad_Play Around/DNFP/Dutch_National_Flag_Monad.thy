@@ -1,11 +1,10 @@
 theory Dutch_National_Flag_Monad
 imports 
   Main
-  "~~/src/HOL/Library/State_Monad"
-                  
+  "../State_Monad_HL"
 begin
 
-text\<open>Monad definitions to encode and extract data from the monad\<close>
+text\<open>Monad definiti.ons to encode and extract data from the monad\<close>
 datatype color = red | white | blue
 
 type_synonym 'a array = "'a list"
@@ -17,40 +16,24 @@ record env =
   i    :: "nat"
   xs   :: "nat array"
   
-definition return:: "'a \<Rightarrow> ('b, 'a) state" where "return = State_Monad.return"
-definition get:: "(env, env) state" where "get = State (\<lambda>x. (x,x))"
-definition put:: "env \<Rightarrow> (env, unit) state" where "put x = State (\<lambda>_. ((),x))"
-definition get_gen:: "(env \<Rightarrow> 'b) \<Rightarrow> (env, 'b) state" where "get_gen acc = do { x \<leftarrow> get; return (acc  x)}"
-definition get_high:: "(env, nat) state" where "get_high = do { x \<leftarrow> get; return (high  x) }" 
-definition get_low:: "(env, nat) state" where "get_low = do { x \<leftarrow> get; return (low x) }" 
-definition get_i:: "(env, nat) state" where "get_i = do { x \<leftarrow> get; return (i x) }" 
-definition get_xs:: "(env, nat array) state" where "get_xs = do { x \<leftarrow> get; return (xs x) }" 
-definition set_high:: "env \<Rightarrow> nat \<Rightarrow> env" where "set_high v x =  
-\<lparr>            high = x,
-             low = low v,
-             i = i v,
-             xs = xs v \<rparr>"
-definition set_low:: "env \<Rightarrow> nat \<Rightarrow> env" where "set_low v x =  
-\<lparr>            high = high v,
-             low = x,
-             i = i v,
-             xs = xs v \<rparr>"
-definition set_i:: "env \<Rightarrow> nat \<Rightarrow> env" where "set_i v x =  
-\<lparr>            high = high v,
-             low = low v,
-             i = x,
-             xs = xs v \<rparr>"
-definition set_xs:: "env \<Rightarrow> nat array \<Rightarrow> env" where "set_xs v x =
-\<lparr>            high = high v,
-             low = low v,
-             i = i v,
-             xs = x \<rparr>"
+(* update functions *)
 
-definition put_high:: "nat \<Rightarrow> (env, unit) state" where "put_high x = do { v \<leftarrow> get; put (set_high v x) }"
-definition put_low:: "nat \<Rightarrow> (env, unit) state" where "put_low x = do { v \<leftarrow> get; put (set_low v x) }"
-definition put_i:: "nat \<Rightarrow> (env, unit) state" where "put_i x = do { v \<leftarrow> get; put (set_i v x) }"
-definition put_xs:: "nat array \<Rightarrow> (env, unit) state" where "put_xs x = do { v \<leftarrow> get; put (set_xs v x) }"
-definition skip:: "(env, unit) state" where "skip = State (\<lambda>x. ((),x))"
+definition high_Env:: "env \<Rightarrow> nat \<Rightarrow> env" where "high_Env s v = s \<lparr> high := v \<rparr>"
+definition low_Env:: "env \<Rightarrow> nat \<Rightarrow> env" where "low_Env s v = s \<lparr> low := v \<rparr>"
+definition i_Env:: "env \<Rightarrow> nat \<Rightarrow> env" where "i_Env s v = s \<lparr> i := v \<rparr>"
+definition xs_Env:: "env \<Rightarrow> nat array  \<Rightarrow> env" where "xs_Env s v = s \<lparr> xs := v \<rparr>"
+
+theorem put_high_rule: "spec (\<lambda>x. p () (x \<lparr> high := v \<rparr>)) (put high_Env v) p"
+  by (simp add: spec_def put_def get_state_def put_state_def high_Env_def)
+
+theorem put_low_rule: "spec (\<lambda>x. p () (x \<lparr> low := v \<rparr>)) (put low_Env v) p"
+  by (simp add: spec_def put_def get_state_def put_state_def low_Env_def)
+
+theorem put_i_rule: "spec (\<lambda>x. p () (x \<lparr> i := v \<rparr>)) (put i_Env v) p"
+  by (simp add: spec_def put_def get_state_def put_state_def i_Env_def)
+
+theorem put_xs_rule: "spec (\<lambda>x. p () (x \<lparr> xs := v \<rparr>)) (put xs_Env v) p"
+  by (simp add: spec_def put_def get_state_def put_state_def xs_Env_def)
 
 section\<open>DNFP\<close>
 
@@ -68,47 +51,55 @@ value\<open>swap [a,b,c,d,e] 0 4 = [e,b,c,d,a]\<close>
 
 definition init_loop where
 "init_loop \<equiv> do{
-                  h \<leftarrow> get_gen high;
-                  i \<leftarrow> get_gen i;
-                  s \<leftarrow> get_gen xs;
-                  return (h, i, s)
+                  h \<leftarrow> get high;
+                  j \<leftarrow> get i;
+                  return (h, j)
                 }"
 
 definition inc_lowbound where
-"inc_lowbound s x\<equiv> do{
-                  l \<leftarrow> get_gen low;                                       
-                  put_xs (swap s x l);
-                  put_i (Suc x);
-                  put_low (Suc l)
+"inc_lowbound \<equiv> do{
+                  l \<leftarrow> get low;  
+                  s \<leftarrow> get xs;  
+                  j \<leftarrow> get i;                                   
+                  put xs_Env (swap s j l);
+                  put i_Env (Suc j);
+                  put low_Env (Suc l)
                 }"
 
 definition add_high where
-"add_high s j h \<equiv> do{
-                    put_xs (swap s j h)
-                  }"
+"add_high \<equiv> do{
+                s \<leftarrow> get xs;
+                j \<leftarrow> get i;
+                h \<leftarrow> get high;
+                put xs_Env (swap s j h)
+              }"
 
 definition dec_highbound where
-"dec_highbound s j h \<equiv> do{
-                    put_high (h - 1);
-                    add_high s j (h-1)
+"dec_highbound \<equiv> do{
+                    h \<leftarrow> get high;
+                    put high_Env (h - 1);
+                    add_high
                 }"
 
 definition inc_index where
-"inc_index j \<equiv> do{
-                  put_i (Suc j)
+"inc_index \<equiv> do{
+                  j \<leftarrow> get i;
+                  put i_Env (Suc j)
                 }"
 
 definition loop_update_action where
-"loop_update_action s j h \<equiv> 
+"loop_update_action \<equiv> 
 do{
+  s \<leftarrow> get xs;
+  j \<leftarrow> get i;
   (if s!j < 1 then do {
-    inc_lowbound s j
+    inc_lowbound
   }else (if s!j > 1 then do 
   {
-    dec_highbound s j h
+    dec_highbound
   }
  else do {
-    inc_index j
+    inc_index
  }))
 }"
 
@@ -119,9 +110,10 @@ fun dnfp_mon:: "nat \<Rightarrow> (env, unit) state" where
 "dnfp_mon 0  = skip"|
 "dnfp_mon (Suc 0)  = skip"|
 "dnfp_mon (Suc n)  = do {
-                      (h, i, s) \<leftarrow> init_loop;
-                        (if h > i then do{
-                          loop_update_action s i h;
+                        h \<leftarrow> get high;
+                        j \<leftarrow> get i;
+                        (if h > j then do{
+                          loop_update_action;
                           dnfp_mon n
                          }
                        else skip
@@ -237,6 +229,10 @@ definition dnfp_post where
                   \<and> length (xs e) > (Suc 0) \<longrightarrow> (inc_index_post e e2  \<or> dec_highbound_post e e2 \<or> inc_lowbound_post e e2)"
 
 section\<open>Lemmators\<close>
+subsection\<open>Hoare proofs\<close>
+
+lemma inc_spec: "spec (GG )"
+
 subsection\<open>Inc_lowbound Invariants\<close>
 text\<open>Pre and post-condition\<close>
 lemma inc_lowbound_prepost: "\<lbrakk>inc_lowbound_pre arr l j h; (mk_rec arr l j h) = e; low_invariant_is_0 arr l;snd(run_state (inc_lowbound arr j) e) = e2 \<rbrakk> \<Longrightarrow> inc_lowbound_post e e2"
@@ -351,13 +347,11 @@ lemma init_loop_inv: "\<lbrakk>init_loop_pre e; invariant_low_to_j_is_1 (xs e) (
 
 subsection\<open>DNFP proof\<close>
 lemma dnfp_prepost: "\<lbrakk>(mk_rec arr l j h) = e; dnfp_pre e; dnfp_pre_aux e; length arr = n; snd(run_state (dnfp_mon n) e) = e2 \<rbrakk> \<Longrightarrow> dnfp_post e e2"
-  apply(simp_all add:  dnfp_pre_def dnfp_pre_aux_def snd_def dnfp_post_def high_invariant_is_2_def loop_update_action_post_def)
-  apply(simp_all add: inc_lowbound_pre_def inc_index_pre_def loop_update_action_pre_def mk_rec_def init_loop_pre_def dec_highbound_pre_def)
-  apply(simp_all add: inc_lowbound_post_def inc_index_post_def loop_update_action_post_def dec_highbound_post_def)
   apply(induction n rule:dnfp_mon.induct)
+  apply(simp add: mk_rec_def dnfp_pre_def snd_def dnfp_post_def high_invariant_is_2_def loop_update_action_post_def)
    apply force
+  apply(simp add: mk_rec_def dnfp_pre_def snd_def dnfp_post_def high_invariant_is_2_def loop_update_action_post_def)
    apply force
-  sledgehammer
-  sorry
+  apply(simp)
 
 end
