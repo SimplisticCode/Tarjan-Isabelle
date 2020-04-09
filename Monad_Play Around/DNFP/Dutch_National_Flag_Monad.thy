@@ -213,9 +213,28 @@ definition inc_lowbound_inv3 :: "env \<Rightarrow> bool" where
                         \<and> high_invariant_is_2_Env s"
 
 definition dec_highbound_pre where 
-"dec_highbound_pre \<equiv> \<lambda>e. loop_update_action_pre e 
-                              \<and> (xs e)!(i e) = 2
-                              \<and> (xs e)!(high e) = 2"
+"dec_highbound_pre e s\<equiv> e = s
+                        \<and>loop_update_action_pre e 
+                        \<and> (xs e)!(i e) = 2
+                        \<and> (xs e)!(high e) = 2"
+
+definition dec_highbound_inv1 where 
+"dec_highbound_inv1 e \<equiv> loop_update_action_pre e 
+                        \<and> (xs e)!(i e) = 2
+                        \<and> (xs e)!(high e) = 2
+                        \<and> low_invariant_is_0_Env e"
+
+definition dec_highbound_inv2 where 
+"dec_highbound_inv2 e \<equiv> loop_update_action_pre e 
+                        \<and> (xs e)!(i e) = 2
+                        \<and> (xs e)!(high e) = 2
+                        \<and> invariant_low_to_j_is_1_Env e"
+
+definition dec_highbound_inv3 where 
+"dec_highbound_inv3 e \<equiv> loop_update_action_pre e 
+                        \<and> (xs e)!(i e) = 2
+                        \<and> (xs e)!(high e) = 2
+                        \<and> high_invariant_is_2_Env e"
 
 definition inc_index_pre where 
 "inc_index_pre  \<equiv> \<lambda>e. loop_update_action_pre e
@@ -281,30 +300,42 @@ lemma inc_lowbound_invariants: "spec inc_lowbound_inv  inc_lowbound (GG invarian
   by (metis (mono_tags, lifting) GG_def inc_lowbound_inv_def inc_lowbound_invariantBlue inc_lowbound_invariantRed inc_lowbound_invariantWhite invariants_Env_def spec_def split_def)
 
 subsection\<open>Dec_highbound Invariants\<close>
-lemma dec_highbound_prepost[simp]: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> dec_highbound_post e e2"
-  apply(simp_all add: dec_highbound_pre_def init_loop_pre_def mk_rec_def loop_update_action_pre_def dec_highbound_post_def snd_def loop_update_action_post_def dec_highbound_def)
-  apply(simp_all add: put_high_def add_high_def set_high_def put_xs_def put_def get_def swap_def set_xs_def)
-  by(auto)
+
+lemma dec_highbound_spec: "spec (dec_highbound_pre e) dec_highbound (GG (dec_highbound_post e))"
+  apply(simp_all add: dec_highbound_def)
+  apply (simp_all add: spec_def)
+  apply(simp_all add: dec_highbound_pre_def loop_update_action_pre_def add_high_def)
+  apply(simp_all add: get_def get_state_def return_def put_def put_state_def GG_def)
+  apply(simp add: dec_highbound_post_def loop_update_action_post_def high_Env_def xs_Env_def swap_def)
+  by linarith
 
 subsubsection\<open>Invariants\<close>
-lemma dec_highbound_invariantRed: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; low_invariant_is_0 (xs e) (low e);snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> low_invariant_is_0 (xs e2) (low e2)"
-apply(simp_all add: dec_highbound_pre_def mk_rec_def loop_update_action_pre_def low_invariant_is_0_def snd_def loop_update_action_post_def dec_highbound_def)
-  apply(simp_all add: put_high_def add_high_def set_high_def put_xs_def put_def get_def swap_def set_xs_def)
-  by (auto)
+lemma dec_highbound_invariantRed: "spec dec_highbound_inv1 dec_highbound (GG low_invariant_is_0_Env)"
+  apply(simp_all add: dec_highbound_def)
+  apply (simp_all add: spec_def dec_highbound_inv1_def loop_update_action_pre_def low_invariant_is_0_Env_def)
+  apply(simp_all add: add_high_def low_invariant_is_0_Env_def get_def get_state_def return_def put_def put_state_def GG_def)
+  apply(simp_all add: high_Env_def i_Env_def xs_Env_def swap_def)
+  by auto
 
-lemma dec_highbound_invariantWhite: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; invariant_low_to_j_is_1 (xs e) (low e) (i e);snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2)"
-apply(simp_all add: dec_highbound_pre_def init_loop_pre_def mk_rec_def loop_update_action_pre_def invariant_low_to_j_is_1_def snd_def loop_update_action_post_def dec_highbound_def)
-  apply(simp_all add: put_high_def add_high_def set_high_def put_xs_def put_def get_def swap_def set_xs_def)
-  by (auto)
+lemma dec_highbound_invariantWhite: "spec dec_highbound_inv2 dec_highbound (GG invariant_low_to_j_is_1_Env)"
+  apply(simp_all add: dec_highbound_def)
+  apply (simp_all add: spec_def dec_highbound_inv2_def loop_update_action_pre_def invariant_low_to_j_is_1_Env_def)
+  apply(simp_all add: add_high_def invariant_low_to_j_is_1_Env_def get_def get_state_def return_def put_def put_state_def GG_def)
+  apply(simp_all add: high_Env_def i_Env_def xs_Env_def swap_def)
+  by auto
 
-lemma dec_highbound_invariantBlue: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; high_invariant_is_2 (xs e) (high e);snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> high_invariant_is_2 (xs e2) (high e2)"
-apply(simp_all add: dec_highbound_pre_def init_loop_pre_def mk_rec_def loop_update_action_pre_def high_invariant_is_2_def snd_def loop_update_action_post_def dec_highbound_def)
-  apply(simp_all add: put_high_def add_high_def set_high_def put_xs_def put_def get_def swap_def set_xs_def)
-  by (smt Suc_pred le_less_Suc_eq length_list_update not_less not_less_eq nth_list_update nth_list_update_neq select_convs(1) select_convs(4) zero_less_Suc)
+lemma dec_highbound_invariantBlue: "spec dec_highbound_inv3 dec_highbound (GG high_invariant_is_2_Env)"
+  apply(simp_all add: dec_highbound_def)
+  apply (simp_all add: spec_def dec_highbound_inv3_def loop_update_action_pre_def high_invariant_is_2_Env_def)
+  apply(simp_all add: add_high_def high_invariant_is_2_Env_def get_def get_state_def return_def put_def put_state_def GG_def)
+  apply(simp_all add: high_Env_def i_Env_def xs_Env_def swap_def)
+  by (smt Suc_diff_Suc Suc_leI diff_zero le_eq_less_or_eq le_zero_eq length_list_update not_less nth_list_update nth_list_update_neq)
 
-lemma dec_highbound_inv: "\<lbrakk>dec_highbound_pre arr l j h; (mk_rec arr l j h) = e; invariant_low_to_j_is_1 (xs e) (low e) (i e); high_invariant_is_2 (xs e) (high e);
-                        low_invariant_is_0 (xs e) (low e); snd(run_state (dec_highbound arr j h) e) = e2 \<rbrakk> \<Longrightarrow> invariant_low_to_j_is_1 (xs e2) (low e2) (i e2) \<and> low_invariant_is_0 (xs e2) (low e2) \<and> high_invariant_is_2 (xs e2) (high e2)"
-  using dec_highbound_invariantBlue dec_highbound_invariantRed dec_highbound_invariantWhite by blast
+definition dec_highbound_inv :: "env \<Rightarrow> bool" where
+"dec_highbound_inv s \<equiv> (dec_highbound_inv3 s \<and> dec_highbound_inv2 s \<and> dec_highbound_inv1 s)"
+
+lemma dec_highbound_invariants: "spec dec_highbound_inv dec_highbound (GG invariants_Env)"
+  by (metis (mono_tags, lifting) GG_def dec_highbound_inv_def dec_highbound_invariantBlue dec_highbound_invariantRed dec_highbound_invariantWhite invariants_Env_def spec_def split_def)
 
 subsection\<open>Inc_index Invariants\<close>
 lemma inc_index_prepost: "\<lbrakk>inc_index_pre arr l j h;  (mk_rec arr l j h) = e; snd(run_state (inc_index j) e) = e2\<rbrakk> \<Longrightarrow> inc_index_post e e2"
