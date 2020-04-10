@@ -93,7 +93,7 @@ do{
   j \<leftarrow> get i;
   (if s!j < 1 then do {
     inc_lowbound
-  }else (if s!j > 1 then do 
+  }else (if s!j = 2 then do 
   {
     dec_highbound
   }
@@ -189,6 +189,18 @@ definition loop_update_action_pre_aux:: "env \<Rightarrow> env \<Rightarrow> boo
 "loop_update_action_pre_aux e s \<equiv> s = e
                               \<and> loop_update_action_pre e"
 
+definition loop_update_action_inv1 where 
+"loop_update_action_inv1 e \<equiv> loop_update_action_pre e 
+                            \<and> low_invariant_is_0_Env e"
+
+definition loop_update_action_inv2 where 
+"loop_update_action_inv2 e \<equiv> loop_update_action_pre e 
+                              \<and> invariant_low_to_j_is_1_Env e"
+
+definition loop_update_action_inv3 where 
+"loop_update_action_inv3 e \<equiv> loop_update_action_pre e 
+                              \<and> high_invariant_is_2_Env e"
+
 definition loop_update_action_post where
 "loop_update_action_post e e' \<equiv> length (xs e) = length (xs e')
                                 \<and> high e \<ge> high e'
@@ -218,7 +230,7 @@ definition inc_lowbound_inv3 :: "env \<Rightarrow> bool" where
 
 definition dec_highbound_pre where 
 "dec_highbound_pre e s\<equiv> e = s
-                        \<and>loop_update_action_pre e 
+                        \<and> loop_update_action_pre e 
                         \<and> (xs e)!(i e) = 2
                         \<and> (xs e)!(high e) = 2"
 
@@ -285,7 +297,7 @@ definition dnfp_post where
 "dnfp_post e e2 \<equiv> length (xs e) = length (xs e2)
                   \<and> length (xs e) > (Suc 0) \<longrightarrow> (inc_index_post e e2  \<or> dec_highbound_post e e2 \<or> inc_lowbound_post e e2)"
 
-section\<open>Lemmators\<close>
+section\<open>Lemmas\<close>
 subsection\<open>Hoare proofs\<close>
 
 lemma inc_lowbound_spec: "spec (inc_lowbound_pre e) inc_lowbound (GG (inc_lowbound_post e))"
@@ -376,7 +388,7 @@ lemma inc_index_invariantRed: "spec inc_index_inv1 inc_index (GG low_invariant_i
   by(simp_all add:  i_Env_def)
 
 lemma inc_index_invariantWhite: "spec inc_index_inv2 inc_index (GG invariant_low_to_j_is_1_Env)"
-  apply(simp_all add: inc_index_def)
+  apply(simp_all add: inc_index_def)         
   apply (simp_all add: spec_def inc_index_inv2_def loop_update_action_pre_def invariant_low_to_j_is_1_Env_def)
   apply(simp_all add:  invariant_low_to_j_is_1_Env_def get_def get_state_def return_def put_def put_state_def GG_def)
   apply(simp_all add:  i_Env_def)
@@ -408,6 +420,37 @@ lemma loop_update_action_spec: "spec (loop_update_action_pre_aux e) loop_update_
   by linarith
 
 subsubsection\<open>Invariants\<close>
+text\<open>Should I add some more assumptions (The preconditions from the 3 methods inside loop_update_action) here in the precondition?\<close>
+lemma loop_update_action_invariantRed: "spec loop_update_action_inv1 loop_update_action (GG low_invariant_is_0_Env)"
+ apply(simp_all add: loop_update_action_def)
+  apply (simp_all add: spec_def)
+  apply(intro allI)
+  apply(simp_all add: loop_update_action_inv1_def loop_update_action_pre_def low_invariant_is_0_Env_def)
+  apply(simp_all only: GG_def dec_highbound_def inc_index_def inc_lowbound_def add_high_def)
+  apply(simp_all add: get_def get_state_def return_def put_def put_state_def GG_def low_invariant_is_0_Env_def loop_update_action_post_def)
+  apply(simp_all add: swap_def high_Env_def xs_Env_def low_Env_def  i_Env_def)
+  by (smt Suc_pred leD length_list_update less_antisym less_trans not_less0 not_less_eq nth_list_update)
+
+lemma loop_update_action_invariantWhite: "spec loop_update_action_inv2 loop_update_action (GG invariant_low_to_j_is_1_Env)"
+ apply(simp_all add: loop_update_action_def)
+  apply (simp_all add: spec_def)
+  apply(intro allI)
+  apply(simp_all add: loop_update_action_inv2_def loop_update_action_pre_def invariant_low_to_j_is_1_Env_def)
+  apply(simp_all only: GG_def dec_highbound_def inc_index_def inc_lowbound_def add_high_def)
+  apply(simp_all add: get_def get_state_def return_def put_def put_state_def GG_def invariant_low_to_j_is_1_Env_def loop_update_action_post_def)
+  apply(simp_all add: swap_def high_Env_def xs_Env_def low_Env_def i_Env_def)
+  sorry
+
+lemma loop_update_action_invariantBlue: "spec loop_update_action_inv3 loop_update_action (GG high_invariant_is_2_Env)"
+  apply(simp_all add: loop_update_action_def)
+  apply (simp_all add: spec_def)
+  apply(intro allI)
+  apply(simp_all add: loop_update_action_inv3_def loop_update_action_pre_def high_invariant_is_2_Env_def)
+  apply(simp_all only: GG_def dec_highbound_def inc_index_def inc_lowbound_def add_high_def)
+  apply(simp_all add: get_def get_state_def return_def put_def put_state_def GG_def high_invariant_is_2_Env_def loop_update_action_post_def)
+  apply(simp_all add: swap_def high_Env_def xs_Env_def low_Env_def i_Env_def)
+  by (metis Suc_leI Suc_pred leD le_eq_less_or_eq le_zero_eq length_list_update nat_neq_iff nth_list_update nth_list_update_neq)
+
 lemma  loop_update_action_invariantRed: "\<lbrakk>(mk_rec arr l j h) = e; loop_update_action_pre e; inc_lowbound_pre arr l j h \<or> dec_highbound_pre arr l j h \<or> inc_index_pre arr l j h; low_invariant_is_0 (xs e) (low e);snd(run_state (loop_update_action arr j h) e) = e2 \<rbrakk> \<Longrightarrow> low_invariant_is_0 (xs e2) (low e2)"
   using dec_highbound_invariantRed inc_index_invariantRed inc_index_pre_def inc_lowbound_invariantRed inc_lowbound_pre_def loop_update_action_def by fastforce
 
