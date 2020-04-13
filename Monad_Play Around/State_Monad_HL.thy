@@ -49,6 +49,10 @@ theorem conj_rule: "\<lbrakk>spec p S q; spec r S s\<rbrakk> \<Longrightarrow> s
   apply (simp add: spec_def)
   by (simp add: case_prod_unfold)
 
+theorem conj_rule_right: "\<lbrakk>spec p S q; spec p S s\<rbrakk> \<Longrightarrow> spec p S (\<lambda>x y. q x y \<and> s x y)"
+  apply (simp add: spec_def)
+  by (simp add: case_prod_unfold)
+
 theorem weaken_rule: "\<lbrakk>\<forall>x. (p x \<longrightarrow> p0 x); spec p0 S q\<rbrakk> \<Longrightarrow> spec p S q"
   by (simp add: spec_def)
 
@@ -56,7 +60,7 @@ theorem strengthen_rule: "\<lbrakk>\<forall>x y. (q0 x y \<longrightarrow> q x y
   apply (simp add: spec_def)
   by (simp add: case_prod_unfold)
 
-theorem cond_rule: "\<lbrakk>spec (\<lambda>x. p x \<and> b) S q; spec (\<lambda>x. p x \<and> \<not>b) T q\<rbrakk> \<Longrightarrow> spec p (do { if b then S else T }) q"
+theorem cond_rule: "\<lbrakk>spec (\<lambda>x. p x \<and> b) S q; spec (\<lambda>x. p x \<and> \<not>b) T q\<rbrakk> \<Longrightarrow> spec p (if b then S else T) q"
   by (simp add: spec_def)
 
 end
