@@ -2,6 +2,7 @@ theory Dutch_National_Flag_Monad
 imports 
   Main
   "../State_Monad_HL"
+  "HOL-Library.Multiset"
 begin
 
 text\<open>Monad definiti.ons to encode and extract data from the monad\<close>
@@ -45,6 +46,9 @@ lemma length_swap: "length(swap l x y) = length l"
 lemma distinct_swap[simp]:
   "distinct(swap l x y) = distinct l"
   by(simp add: swap_def)
+
+lemma mset_swap: "mset (swap l x y) = mset l"
+  by (simp add: Dutch_National_Flag_Monad.swap_def mset_swap)
 
 value\<open>swap [a,b,c,d,e] 0 4 = [e,b,c,d,a]\<close>
 
@@ -368,6 +372,7 @@ lemma inc_lowbound_spec: "spec (inc_lowbound_pre e) inc_lowbound (GG (inc_lowbou
    apply (simp add: spec_def put_def put_state_def swap_def get_state_def i_Env_def)
    apply(intro allI; simp)
    apply(intro get_rule; intro allI)
+   apply(simp add: spec_def put_def get_state_def put_state_def low_Env_def)
   by(simp add: spec_def put_def get_state_def put_state_def low_Env_def)
 
 subsubsection\<open>Invariants\<close>
@@ -433,7 +438,8 @@ lemma inc_lowbound_invariants: "spec inc_lowbound_inv  inc_lowbound (GG invarian
   apply(intro get_rule; intro allI)
   apply (simp add: spec_def put_def put_state_def get_def swap_def get_state_def low_Env_def)
   apply(intro allI)
-
+  sorry
+text\<open>Maybe I should use the metis proof here?\<close>
  (* by (metis  inc_lowbound_invariantBlue inc_lowbound_invariantRed inc_lowbound_invariantWhite invariants_Env_def spec_def split_def)*)
 
 subsection\<open>Dec_highbound Invariants\<close>
@@ -459,21 +465,18 @@ lemma dec_highbound_spec: "spec (dec_highbound_pre e) dec_highbound (GG (dec_hig
            apply(intro allI; simp)
           apply(intro get_rule; intro allI; simp)
              apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def)
-        apply(intro seq_rule[of _ _ "(\<lambda>_ y. (xs e)!(i e) = 2 \<and> i e = i y \<and> i e < high e \<and> high e \<le> length (xs e))"])
+        apply(intro seq_rule[of _ _ "(\<lambda>_ y. i e = i y \<and> i e < high e \<and> high e \<le> length (xs e))"])
              apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def)
            apply(intro allI; simp)
          apply(intro get_rule; intro allI; simp)
         apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def)
-    
-(*I have some problems to establish the seq_rule here*)
-        apply(intro seq_rule[of _ _ "(\<lambda>_ y. (xs e)!(i e) = 2 \<and> high e > high y \<and> length (xs e) = length(xs y))"])
+        (*I have had some problems to establish the seq_rule here*)
+        apply(intro seq_rule[of _ _ "(\<lambda>x y. i e < high e \<and> high y + 1 = high e \<and> xs e ! i e = 2 \<and> xs e = xs y \<and> i e = i y \<and> high e \<le> length (xs e))"]) 
         apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def)
-           apply(intro allI; simp)
+        apply(intro allI; simp)
        apply(intro get_rule; intro allI; simp)
        apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def swap_def)
-       apply(intro allI)
-  sledgehammer
-       defer 
+       apply (auto)
       apply(intro seq_rule[of _ _ "(\<lambda>_ y. length (xs e) = length (xs y))"])
       apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def)
        apply(intro allI; simp)
@@ -507,15 +510,12 @@ lemma dec_highbound_invariantRed: "spec dec_highbound_inv1 dec_highbound (GG low
     unfolding dec_highbound_inv1_def loop_update_action_pre_def GG_def low_invariant_is_0_Env_def
     apply(simp_all add: dec_highbound_def)
     apply(intro get_rule; intro allI; simp)
-    apply(intro seq_rule[of _ _ "(\<lambda>_ e. (\<forall>x < low e. xs e ! x = 0))"])
-     apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def)
+    apply(intro seq_rule[of _ _ "(\<lambda>_ e. low e \<le> i e \<and> i e \<le> high e \<and> high e < length (xs e) \<and> (\<forall>x < low e. xs e ! x = 0))"])
+     apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def swap_def)
+     apply linarith
      apply(intro allI)
     apply(intro get_rule;intro allI; simp)
-    apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def)
-    apply(intro allI)
-    sledgehammer
-    by auto
-
+    by (simp add: spec_def put_def put_state_def get_state_def xs_Env_def swap_def)
 
 lemma dec_highbound_invariantWhite: "spec dec_highbound_inv2 dec_highbound (GG invariant_low_to_j_is_1_Env)"
   apply(simp_all add: dec_highbound_def)
@@ -528,11 +528,13 @@ lemma dec_highbound_invariantBlue: "spec dec_highbound_inv3 dec_highbound (GG hi
     unfolding dec_highbound_inv3_def loop_update_action_pre_def GG_def high_invariant_is_2_Env_def
     apply(simp_all add: dec_highbound_def)
     apply(intro get_rule; intro allI; simp)
-  apply(intro seq_rule[of _ _ "(\<lambda>x e.(\<forall>x \<ge> high e. xs e ! x = 2))"])
-    apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def)
+        apply(intro seq_rule[of _ _ "(\<lambda>_ e. (xs e)! i e = 2  \<and> i e \<le> high e \<and> high e < length (xs e) \<and> (\<forall>x\<ge>high e. xs e ! x = 2))"]) 
+     apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def)
      apply(intro allI)
+    sledgehammer
     apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def swap_def)
-    apply(intro allI)
+     apply(intro allI)
+    sorry
 
 
 definition dec_highbound_inv :: "env \<Rightarrow> bool" where
