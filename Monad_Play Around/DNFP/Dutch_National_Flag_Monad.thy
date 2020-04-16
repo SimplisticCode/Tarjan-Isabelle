@@ -48,7 +48,7 @@ lemma distinct_swap[simp]:
   by(simp add: swap_def)
 
 lemma mset_swap: "mset (swap l x y) = mset l"
-  by (simp add: Dutch_National_Flag_Monad.swap_def mset_swap)
+  by (simp add: swap_def mset_swap)
 
 value\<open>swap [a,b,c,d,e] 0 4 = [e,b,c,d,a]\<close>
 
@@ -83,7 +83,7 @@ definition loop_update_action where
     (s, j) \<leftarrow> get (\<lambda>e. (xs e, i e));
     (if s!j < 1 then do {
       inc_lowbound
-    } else (if s!j = 2 then do 
+    } else (if s!j > 1 then do 
     {
       dec_highbound
     }
@@ -702,10 +702,11 @@ lemma loop_update_action_invariantWhite: "spec loop_update_action_inv2 loop_upda
      apply(intro allI; simp)
     apply(intro get_rule;intro allI; simp)
    apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def swap_def)
-   apply(simp only: inc_index_def)
-   apply(intro get_rule;intro allI)
-   apply (simp only: spec_def put_def put_state_def get_state_def i_Env_def)
-sorry
+   apply(simp add: inc_index_def)
+   apply(intro get_rule;intro allI; simp)
+   apply (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
+   apply(intro allI)
+   using nat_neq_iff by fastforce
 
 lemma loop_update_action_invariantBlue: "spec loop_update_action_inv3 loop_update_action (GG high_invariant_is_2_Env)"
    unfolding loop_update_action_inv3_def loop_update_action_pre_def  GG_def high_invariant_is_2_Env_def
@@ -723,12 +724,15 @@ lemma loop_update_action_invariantBlue: "spec loop_update_action_inv3 loop_updat
   apply(intro allI; simp)
   apply(intro get_rule; intro allI)
      apply (simp add: spec_def put_def put_state_def get_state_def low_Env_def)
-   apply(simp add: dec_highbound_def) 
+
+    apply(simp_all add: dec_highbound_def)
     apply(intro get_rule; intro allI; simp)
      apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def xs_Env_def swap_def get_def return_def)
     apply(intro allI)
-   apply (smt Suc_leI Suc_pred diff_is_0_eq' leD le_eq_less_or_eq length_list_update less_imp_diff_less nth_list_update nth_list_update_neq)
-   apply(simp add: inc_index_def) 
+   sledgehammer
+
+   defer
+   apply(simp add: inc_index_def)
     apply(intro get_rule; intro allI; simp)
    by (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
 
