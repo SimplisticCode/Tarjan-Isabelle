@@ -10,6 +10,7 @@ datatype color = red | white | blue
 
 type_synonym 'a array = "'a list"
 
+
 section\<open>Monad definitions\<close>
 record env = 
   high :: "nat"
@@ -708,6 +709,15 @@ lemma loop_update_action_invariantWhite: "spec loop_update_action_inv2 loop_upda
    apply(intro allI)
    using nat_neq_iff by fastforce
 
+lemma value_must_be_one : "\<lbrakk>xs e ! i e  \<noteq> 0 ; xs e! i e \<noteq> 2 ; i e < length (xs e) ; set(xs e) \<subseteq> {0,1,2}\<rbrakk> \<Longrightarrow> xs e ! i e = 1"
+  by (smt insertE insert_subset mk_disjoint_insert nth_mem singletonD)
+
+lemma value_must_be_two_aux : "\<lbrakk>xs e ! i e  \<noteq> 0 ; xs e! i e \<noteq> 1 ; i e < length (xs e) ; set(xs e) \<subseteq> {0,1,2}\<rbrakk> \<Longrightarrow> xs e ! i e = 2"
+  by (smt insertE insert_subset mk_disjoint_insert nth_mem singletonD)
+
+lemma value_must_be_two : "\<lbrakk>xs e ! i e  > 0 ; xs e! i e > 1 ; i e < length (xs e) ; set(xs e) \<subseteq> {0,1,2}\<rbrakk> \<Longrightarrow> xs e ! i e = 2"
+  using nat_neq_iff value_must_be_two_aux by blast
+
 lemma loop_update_action_invariantBlue: "spec loop_update_action_inv3 loop_update_action (GG high_invariant_is_2_Env)"
    unfolding loop_update_action_inv3_def loop_update_action_pre_def  GG_def high_invariant_is_2_Env_def
   apply(simp add: loop_update_action_def)
@@ -724,13 +734,11 @@ lemma loop_update_action_invariantBlue: "spec loop_update_action_inv3 loop_updat
   apply(intro allI; simp)
   apply(intro get_rule; intro allI)
      apply (simp add: spec_def put_def put_state_def get_state_def low_Env_def)
-
     apply(simp_all add: dec_highbound_def)
     apply(intro get_rule; intro allI; simp)
      apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def xs_Env_def swap_def get_def return_def)
-    apply(intro allI)
-   sledgehammer
-
+   apply(intro allI)
+   apply (smt One_nat_def Suc_leI Suc_pred le_less length_list_update less_Suc_eq_0_disj less_imp_Suc_add less_le_trans nth_list_update value_must_be_two)
    defer
    apply(simp add: inc_index_def)
     apply(intro get_rule; intro allI; simp)
