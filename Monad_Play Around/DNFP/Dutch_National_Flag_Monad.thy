@@ -97,9 +97,9 @@ definition loop_update_action where
 
 text\<open>A version using a state monad for storing the list/array that is being sorted\<close>
 fun dnfp_mon:: "nat \<Rightarrow> (env, unit) state" where
-"dnfp_mon 0  = skip"|
-"dnfp_mon (Suc 0)  = skip"|
-"dnfp_mon (Suc n)  = do {
+  case0:"dnfp_mon 0  = skip"|
+  case1:"dnfp_mon (Suc 0)  = skip"|
+  caseN:"dnfp_mon (Suc n)  = do {
                         (h, j) \<leftarrow> get (\<lambda>e. (high e, i e));
                         (if h > j then do{
                           loop_update_action;
@@ -164,8 +164,9 @@ text\<open>This can be used in the other pre and post-conditions for the methods
 subsection\<open>Pre- and Postconditions\<close>
 
 subsubsection\<open>Pre-conditions\<close>
-definition dnfp_pre where
-"dnfp_pre e \<equiv> high e \<ge> i e
+definition dnfp_pre:: "env \<Rightarrow> env \<Rightarrow> bool" where
+"dnfp_pre e s \<equiv> s = e
+              \<and> high e \<ge> i e
               \<and> i e \<ge> low e 
               \<and> length (xs e) \<ge> high e
               \<and> set (xs e) \<subseteq> {1,2,3}"
@@ -288,10 +289,11 @@ definition inc_index_post:: "env \<Rightarrow> env \<Rightarrow> bool" where
 text\<open>Is it after one iteration of after completion?\<close>
 definition dnfp_post where 
 "dnfp_post e e2 \<equiv> length (xs e) = length (xs e2)
-                          \<and> high e \<ge> high e2
-                          \<and> low e \<le> low e2
-                          \<and> i e \<le> i e2
-                          \<and> high e - i e > high e2 - i e2"
+                  \<and> high e \<ge> high e2
+                  \<and> low e \<le> low e2
+                  \<and> i e \<le> i e2
+                  \<and> high e - i e \<ge> high e2 - i e2
+                  \<and> mset (xs e) = mset (xs e2)"
 
 section\<open>Lemmas\<close>
 subsection\<open>Hoare proofs\<close>
@@ -507,6 +509,7 @@ lemma dec_highbound_invariantBlue: "spec dec_highbound_inv3 dec_highbound (GG hi
     unfolding dec_highbound_inv3_def loop_update_action_pre_def GG_def high_invariant_is_2_Env_def
     apply(simp_all add: dec_highbound_def)
     apply(intro get_rule; intro allI; simp)
+    (*apply(intro seq_rule[of _ _ "(\<lambda>x e. \<forall>x > high e. xs e ! x = 2)"])*)
      apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def xs_Env_def swap_def get_def return_def)
     apply(intro allI)
     by (smt Suc_leI Suc_pred diff_is_0_eq' leD le_eq_less_or_eq length_list_update less_imp_diff_less nth_list_update nth_list_update_neq)
@@ -745,13 +748,224 @@ lemma loop_update_action_invariantBlue: "spec loop_update_action_inv3 loop_updat
    by (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
 
 subsection\<open>DNFP proof\<close>
-(*How to apply this method*)
 lemma dnfp_prepost: "spec (dnfp_pre e) (dnfp_mon n) (GG (dnfp_post e))"
-  apply(induction n rule:dnfp_mon.induct)
-  apply(simp add: mk_rec_def dnfp_pre_def snd_def dnfp_post_def high_invariant_is_2_def loop_update_action_post_def)
-   apply force
-  apply(simp add: mk_rec_def dnfp_pre_def snd_def dnfp_post_def high_invariant_is_2_def loop_update_action_post_def)
-   apply force
-  apply(simp)
+  apply(induction rule: dnfp_mon.induct)
+  unfolding dnfp_pre_def  GG_def dnfp_post_def
+    apply(simp add: spec_def)
+    apply (simp add: skip_def)
+    apply(simp add: spec_def)
+   apply (simp add: skip_def)
+  apply(intro conj_rule_right; simp only: caseN)
+   apply(intro get_rule; intro allI; clarify)
+  apply(intro cond_rule)
+  apply(simp add: loop_update_action_def)
+  apply(intro get_rule; intro allI; clarify)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. length (xs e) = length (xs y))"])
+  apply(intro cond_rule)
+  apply(simp add: inc_lowbound_def)
+   apply(intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. length (xs e) = length (xs y))"])
+    apply(simp add: spec_def put_def xs_Env_def swap_def put_state_def get_state_def)
+   apply(intro allI; simp)
+   apply(intro get_rule; intro allI)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. length (xs e) = length (xs y))"])
+    apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def)
+   apply(intro allI; simp)
+         apply(intro get_rule; intro allI)
+    apply(simp add: spec_def put_def low_Env_def put_state_def get_state_def)
+  apply(simp add: dec_highbound_def)
+   apply(intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. length (xs e) = length (xs y))"])
+    apply(simp add: spec_def put_def high_Env_def put_state_def get_state_def)
+   apply(intro allI; simp)
+  apply(intro get_rule; intro allI; simp)
+    apply(simp add: spec_def put_def xs_Env_def swap_def put_state_def get_state_def)
+  apply(simp add: inc_index_def)
+  apply(intro get_rule; intro allI; simp)
+    apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def)
+        apply(intro allI; simp)
+    apply(simp add: spec_def run_state_def)
+        apply(intro allI)
+
+  defer
+        apply(simp add: spec_def skip_def)
+   apply(intro get_rule; intro allI; clarify)
+       apply(intro cond_rule)
+  apply(simp add: loop_update_action_def)
+  apply(intro get_rule; intro allI; clarify)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. high y \<le> high e)"])
+       apply(intro cond_rule)
+ apply(simp add: inc_lowbound_def)
+   apply(intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. high y \<le> high e)"])
+    apply(simp add: spec_def put_def xs_Env_def swap_def put_state_def get_state_def)
+   apply(intro allI; simp)
+   apply(intro get_rule; intro allI)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. high y \<le> high e)"])
+    apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def)
+   apply(intro allI; simp)
+         apply(intro get_rule; intro allI)
+    apply(simp add: spec_def put_def low_Env_def put_state_def get_state_def)
+  apply(simp add: dec_highbound_def)
+   apply(intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. high y \<le> high e)"])
+    apply(simp add: spec_def put_def high_Env_def put_state_def get_state_def)
+   apply(intro allI; simp)
+  apply(intro get_rule; intro allI; simp)
+    apply(simp add: spec_def put_def xs_Env_def swap_def put_state_def get_state_def)
+  apply(simp add: inc_index_def)
+  apply(intro get_rule; intro allI; simp)
+    apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def)
+        apply(intro allI; simp)
+    apply(simp add: spec_def run_state_def)
+        apply(intro allI)
+        defer (*Look at this*)
+        apply(simp add: spec_def skip_def)
+
+   apply(intro get_rule; intro allI; clarify)
+       apply(intro cond_rule)
+  apply(simp add: loop_update_action_def)
+  apply(intro get_rule; intro allI; clarify)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. low e \<le> low y)"])
+       apply(intro cond_rule)
+ apply(simp add: inc_lowbound_def)
+   apply(intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. low e \<le> low y)"])
+    apply(simp add: spec_def put_def xs_Env_def swap_def put_state_def get_state_def)
+   apply(intro allI; simp)
+   apply(intro get_rule; intro allI)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. low e \<le> low y)"])
+    apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def)
+   apply(intro allI; simp)
+         apply(intro get_rule; intro allI)
+    apply(simp add: spec_def put_def low_Env_def put_state_def get_state_def)
+  apply(simp add: dec_highbound_def)
+   apply(intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. low e \<le> low y)"])
+    apply(simp add: spec_def put_def high_Env_def put_state_def get_state_def)
+   apply(intro allI; simp)
+  apply(intro get_rule; intro allI; simp)
+    apply(simp add: spec_def put_def xs_Env_def swap_def put_state_def get_state_def)
+  apply(simp add: inc_index_def)
+  apply(intro get_rule; intro allI; simp)
+    apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def)
+        apply(intro allI; simp)
+    apply(simp add: spec_def run_state_def)
+        apply(intro allI)
+        defer (*Look at this*)
+        apply(simp add: spec_def skip_def)
+
+   apply(intro get_rule; intro allI; clarify)
+       apply(intro cond_rule)
+  apply(simp add: loop_update_action_def)
+  apply(intro get_rule; intro allI; clarify)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. i e \<le> i y)"])
+       apply(intro cond_rule)
+ apply(simp add: inc_lowbound_def)
+   apply(intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. i e \<le> i y)"])
+    apply(simp add: spec_def put_def xs_Env_def swap_def put_state_def get_state_def)
+   apply(intro allI; simp)
+   apply(intro get_rule; intro allI)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. i e \<le> i y)"])
+    apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def)
+   apply(intro allI; simp)
+         apply(intro get_rule; intro allI)
+    apply(simp add: spec_def put_def low_Env_def put_state_def get_state_def)
+  apply(simp add: dec_highbound_def)
+   apply(intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. i e \<le> i y)"])
+    apply(simp add: spec_def put_def high_Env_def put_state_def get_state_def)
+   apply(intro allI; simp)
+  apply(intro get_rule; intro allI; simp)
+    apply(simp add: spec_def put_def xs_Env_def swap_def put_state_def get_state_def)
+  apply(simp add: inc_index_def)
+  apply(intro get_rule; intro allI; simp)
+    apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def)
+        apply(intro allI; simp)
+    apply(simp add: spec_def run_state_def)
+        apply(intro allI)
+        defer (*Look at this*)
+        apply(simp add: spec_def skip_def)
+
+   apply(intro get_rule; intro allI; clarify)
+       apply(intro cond_rule)
+  apply(simp add: loop_update_action_def)
+  apply(intro get_rule; intro allI; clarify)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. high y - i y \<le> high e - i e)"])
+       apply(intro cond_rule)
+ apply(simp add: inc_lowbound_def)
+   apply(intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. high y - i y \<le> high e - i e)"])
+    apply(simp add: spec_def put_def xs_Env_def swap_def put_state_def get_state_def)
+   apply(intro allI; simp)
+   apply(intro get_rule; intro allI)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. high y - i y \<le> high e - i e)"])
+            apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def)
+  apply (simp add: le_diff_conv)
+   apply(intro allI; simp)
+         apply(intro get_rule; intro allI)
+    apply(simp add: spec_def put_def low_Env_def put_state_def get_state_def)
+  apply(simp add: dec_highbound_def)
+   apply(intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. high y - i y \<le> high e - i e)"])
+  apply(simp add: spec_def put_def high_Env_def put_state_def get_state_def)
+  apply (simp add: diff_le_mono2)
+   apply(intro allI; simp)
+  apply(intro get_rule; intro allI; simp)
+    apply(simp add: spec_def put_def xs_Env_def swap_def put_state_def get_state_def)
+  apply(simp add: inc_index_def)
+  apply(intro get_rule; intro allI; simp)
+         apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def)
+  apply (simp add: diff_le_mono2)
+        apply(intro allI; simp)
+    apply(simp add: spec_def run_state_def)
+        apply(intro allI)
+        defer (*Look at this*)
+        apply(simp add: spec_def skip_def)
+
+   apply(intro get_rule; intro allI; clarify)
+       apply(intro cond_rule)
+  apply(simp add: loop_update_action_def)
+  apply(intro get_rule; intro allI; clarify)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. mset (xs e) = mset (xs y))"])
+       apply(intro cond_rule)
+ apply(simp add: inc_lowbound_def)
+   apply(intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. mset (xs e) = mset (xs y))"])
+            apply(simp add: spec_def put_def xs_Env_def swap_def put_state_def get_state_def)
+  apply (simp add: Multiset.mset_swap)
+   apply(intro allI; simp)
+   apply(intro get_rule; intro allI)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. mset (xs e) = mset (xs y))"])
+            apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def)
+   apply(intro allI; simp)
+         apply(intro get_rule; intro allI)
+    apply(simp add: spec_def put_def low_Env_def put_state_def get_state_def)
+  apply(simp add: dec_highbound_def)
+   apply(intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. mset (xs e) = mset (xs y))"])
+  apply(simp add: spec_def put_def high_Env_def put_state_def get_state_def)
+   apply(intro allI; simp)
+  apply(intro get_rule; intro allI; simp)
+          apply(simp add: spec_def put_def xs_Env_def swap_def put_state_def get_state_def)
+  apply (simp add: Multiset.mset_swap)
+  apply(simp add: inc_index_def)
+  apply(intro get_rule; intro allI; simp)
+   apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def)
+    apply(intro allI; simp)
+    apply(simp add: spec_def run_state_def)
+        apply(intro allI)
+        defer (*Look at this*)
+        apply(simp add: spec_def skip_def)
+
+  apply(auto)
+  sledgehammer
+
   sorry
+
+text\<open>Invariants proof\<close>
+lemma dnfp_invariantRed: "spec loop_update_action_inv3 (dnfp_mon n) (GG high_invariant_is_2_Env)"
+
+
 end
