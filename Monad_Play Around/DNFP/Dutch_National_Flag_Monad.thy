@@ -764,6 +764,14 @@ lemma loop_update_action_invariantBlue: "spec loop_update_action_inv3 loop_updat
     apply(intro get_rule; intro allI; simp)
    by (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
 
+definition loop_update_action_inv :: "env \<Rightarrow> bool" where
+"loop_update_action_inv s \<equiv> (loop_update_action_inv3 s \<and> loop_update_action_inv2 s \<and> loop_update_action_inv1 s)"
+
+
+lemma loop_update_action_invariants: "spec loop_update_action_inv loop_update_action (GG invariants_Env)"
+  by (metis (mono_tags, lifting) GG_def loop_update_action_inv_def loop_update_action_invariantBlue loop_update_action_invariantRed loop_update_action_invariantWhite invariants_Env_def spec_def split_def)
+
+
 lemma dnfp_aux1: "spec (\<lambda>y. length (xs e) = length (xs y)) (dnfp_mon v) (\<lambda>x y. length (xs e) = length (xs y))"
   apply(induction v rule: dnfp_mon.induct)
     apply(simp add: spec_def)
@@ -1195,8 +1203,69 @@ lemma dnfp_prepost: "spec (dnfp_pre e) (dnfp_mon n) (GG (dnfp_post e))"
   using dnfp_aux6 apply blast
   by(simp add: spec_def skip_def)
 
-
 subsection\<open>Invariants proof\<close>
+definition sorted_array :: "env \<Rightarrow> bool" where
+  "sorted_array e \<equiv> invariants_Env e 
+                  \<and> set(xs e) = {0,1,2}
+                  \<and> low e \<le> i e
+                  \<and> i e \<le> high e
+                  \<and> high e \<le> length (xs e)"
+
+definition sorted_array_aux1 :: "env \<Rightarrow> bool" where
+  "sorted_array_aux1 e \<equiv> invariants_Env e 
+                  \<and> set(xs e) \<subseteq> {0}"
+
+lemma sorted_aux1: "\<lbrakk>sorted_array_aux1 e\<rbrakk> \<Longrightarrow> sorted (xs e)"
+  unfolding sorted_array_aux1_def invariants_Env_def high_invariant_is_2_Env_def invariant_low_to_j_is_1_Env_def low_invariant_is_0_Env_def
+  by (smt eq_iff le_numeral_extra(1) less_trans list.size(3) nth_mem set_empty singletonD sorted01 sorted_iff_nth_mono_less subset_singleton_iff)
+
+definition sorted_array_aux2 :: "env \<Rightarrow> bool" where
+  "sorted_array_aux2 e \<equiv> invariants_Env e 
+                  \<and> set(xs e) \<subseteq> {1}
+                  \<and> low e \<le> i e
+                  \<and> i e \<le> high e
+                  \<and> high e \<le> length (xs e)"
+
+lemma sorted_aux2: "\<lbrakk>sorted_array_aux2 e\<rbrakk> \<Longrightarrow> sorted (xs e)"
+  unfolding sorted_array_aux2_def invariants_Env_def high_invariant_is_2_Env_def invariant_low_to_j_is_1_Env_def low_invariant_is_0_Env_def
+  by (smt eq_iff le_numeral_extra(1) less_trans list.size(3) nth_mem set_empty singletonD sorted01 sorted_iff_nth_mono_less subset_singleton_iff)
+
+definition sorted_array_aux3 :: "env \<Rightarrow> bool" where
+  "sorted_array_aux3 e \<equiv> invariants_Env e 
+                  \<and> set(xs e) \<subseteq> {2}"
+
+lemma sorted_aux3: "\<lbrakk>sorted_array_aux3 e\<rbrakk> \<Longrightarrow> sorted (xs e)"
+  unfolding sorted_array_aux3_def invariants_Env_def high_invariant_is_2_Env_def invariant_low_to_j_is_1_Env_def low_invariant_is_0_Env_def
+  by (smt eq_iff le_numeral_extra(1) less_trans list.size(3) nth_mem set_empty singletonD sorted01 sorted_iff_nth_mono_less subset_singleton_iff)
+
+definition sorted_array_aux4 :: "env \<Rightarrow> bool" where
+  "sorted_array_aux4 e \<equiv> invariants_Env e 
+                  \<and> set(xs e) \<subseteq> {0,1}"
+
+lemma sorted_aux4: "\<lbrakk>sorted_array_aux4 e\<rbrakk> \<Longrightarrow> sorted (xs e)"
+  unfolding sorted_array_aux4_def invariants_Env_def high_invariant_is_2_Env_def invariant_low_to_j_is_1_Env_def low_invariant_is_0_Env_def
+  sorry
+
+definition sorted_array_aux5 :: "env \<Rightarrow> bool" where
+  "sorted_array_aux5 e \<equiv> invariants_Env e 
+                  \<and> set(xs e) \<subseteq> {1,2}"
+
+lemma sorted_aux5: "\<lbrakk>sorted_array_aux5 e\<rbrakk> \<Longrightarrow> sorted (xs e)"
+  unfolding sorted_array_aux5_def invariants_Env_def high_invariant_is_2_Env_def invariant_low_to_j_is_1_Env_def low_invariant_is_0_Env_def
+  sorry
+
+definition sorted_array_aux6 :: "env \<Rightarrow> bool" where
+  "sorted_array_aux6 e \<equiv> invariants_Env e 
+                  \<and> set(xs e) \<subseteq> {0,2}"
+
+lemma sorted_aux6: "\<lbrakk>sorted_array_aux6 e\<rbrakk> \<Longrightarrow> sorted (xs e)"
+  unfolding sorted_array_aux6_def invariants_Env_def high_invariant_is_2_Env_def invariant_low_to_j_is_1_Env_def low_invariant_is_0_Env_def
+  sorry
+
+lemma sorted_aux: "\<lbrakk>sorted_array e\<rbrakk> \<Longrightarrow> sorted (xs e)"
+  unfolding sorted_array_def invariants_Env_def high_invariant_is_2_Env_def invariant_low_to_j_is_1_Env_def low_invariant_is_0_Env_def
+  sledgehammer
+  sorry
 
 subsubsection\<open>Lemmas\<close>
 lemma dnfp_invariantRed_aux: "spec (\<lambda>e. \<forall>x<low e. xs e ! x = 0) (dnfp_mon v) (\<lambda>x e. \<forall>x<low e. xs e ! x = 0)"
@@ -1213,35 +1282,29 @@ lemma dnfp_invariantRed_aux: "spec (\<lambda>e. \<forall>x<low e. xs e ! x = 0) 
   apply(intro seq_rule[of _ _ "(\<lambda>x y. \<forall>x<low e. xs e ! x = 0)"])
   apply(intro cond_rule)
   apply(simp add: inc_lowbound_def)
-   apply(intro get_rule; intro allI; simp)
-  apply(intro seq_rule[of _ _ "(\<lambda>x e. xs e ! low e = 0 \<and>  (\<forall>x<low e. xs e ! x = 0))"])
-       apply (simp add: spec_def put_def put_state_def swap_def get_state_def xs_Env_def run_state_def)
-
-       defer
+     apply (intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x e. (\<forall>x<low e. xs e ! x = 0))"])
+       apply (simp add: spec_def put_def put_state_def swap_def get_state_def xs_Env_def)
+  apply(intro allI)
+  defer
        apply(intro allI; simp)
   apply(intro get_rule; intro allI)
-  apply(intro seq_rule[of _ _ "(\<lambda>x y. \<forall>x<low e. xs e ! x = 0)"])
-        apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def run_state_def)
-  sledgehammer
-  defer
-   apply(intro allI; simp)
-   apply(intro get_rule; intro allI)
-        apply(simp add: spec_def put_def low_Env_def put_state_def get_state_def run_state_def)
-  sledgehammer
-  defer
-  apply(simp add: dec_highbound_def)
-   apply(intro get_rule; intro allI; simp)
-  apply(intro seq_rule[of _ _ "(\<lambda>x y. \<forall>x<low e. xs e ! x = 0)"])
-         apply(simp add: spec_def put_def high_Env_def put_state_def get_state_def)
-  sledgehammer
-  defer
-   apply(intro allI; simp)
-  apply(intro get_rule; intro allI; simp)
-         apply(simp add: spec_def put_def xs_Env_def swap_def put_state_def get_state_def)
-  defer
-  apply(simp add: inc_index_def)
-  apply(intro get_rule; intro allI; simp)
-    apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def)
+  apply(intro seq_rule[of _ _ "(\<lambda>x e. xs e ! low e = 0 \<and> (\<forall>x<low e. xs e ! x = 0))"])
+   apply (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
+  apply(intro allI; simp)
+  apply(intro get_rule; intro allI)
+     apply (simp add: spec_def put_def put_state_def get_state_def low_Env_def)
+   using less_antisym apply blast
+     apply(simp add: dec_highbound_def)
+     apply (intro get_rule; intro allI; simp)
+      apply(intro seq_rule[of _ _ "(\<lambda>x e. (\<forall>x<low e. xs e ! x = 0) \<and> high e \<le> length (xs e) \<and> high e \<ge> i e \<and> low e \<le> i e)"]) 
+       apply (simp add: spec_def get_def put_def get_state_def put_state_def high_Env_def)
+       apply(linarith)
+      apply(intro allI; simp)
+     apply (intro get_rule; intro allI; simp)
+      apply (simp add: spec_def get_def put_def get_state_def put_state_def xs_Env_def swap_def)
+     apply(simp add: inc_index_def)
+     apply (intro get_rule; intro allI; simp)
   sorry
 
 lemma dnfp_invariantWhite_aux: "spec (\<lambda>e. \<forall>x. low e \<le> x \<and> x < i e \<longrightarrow> xs e ! x = Suc 0) (dnfp_mon v) (\<lambda>x e. \<forall>x. low e \<le> x \<and> x < i e \<longrightarrow> xs e ! x = Suc 0)"
@@ -1369,5 +1432,8 @@ lemma dnfp_invariantBlue: "spec dnfp_inv3 (dnfp_mon n) (GG high_invariant_is_2_E
   apply(simp add: spec_def)
    apply(simp add: skip_def)
    sorry
+
+
+
 
 end
