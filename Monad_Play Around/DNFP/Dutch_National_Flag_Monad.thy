@@ -171,6 +171,13 @@ definition dnfp_pre:: "env \<Rightarrow> env \<Rightarrow> bool" where
               \<and> length (xs e) \<ge> high e
               \<and> set (xs e) \<subseteq> {1,2,3}"
 
+definition dnfp_pre_aux:: "env \<Rightarrow> bool" where
+"dnfp_pre_aux e \<equiv> 
+              high e \<ge> i e
+              \<and> i e \<ge> low e 
+              \<and> length (xs e) \<ge> high e
+              \<and> set (xs e) \<subseteq> {1,2,3}"
+
 definition loop_update_action_pre:: "env \<Rightarrow> bool" where
 "loop_update_action_pre e \<equiv> high e > i e
                              \<and> length (xs e) > (Suc 0)
@@ -294,6 +301,18 @@ definition dnfp_post where
                   \<and> i e \<le> i e2
                   \<and> high e - i e \<ge> high e2 - i e2
                   \<and> mset (xs e) = mset (xs e2)"
+
+definition dnfp_inv1:: "env \<Rightarrow> bool" where 
+"dnfp_inv1 e \<equiv> dnfp_pre_aux e
+                \<and> low_invariant_is_0_Env e"
+
+definition dnfp_inv2:: "env \<Rightarrow> bool" where 
+"dnfp_inv2 e \<equiv> dnfp_pre_aux e
+                \<and> invariant_low_to_j_is_1_Env e"
+
+definition dnfp_inv3:: "env \<Rightarrow> bool" where
+"dnfp_inv3 e \<equiv> dnfp_pre_aux e
+                \<and> high_invariant_is_2_Env e"
 
 section\<open>Lemmas\<close>
 subsection\<open>Hoare proofs\<close>
@@ -504,7 +523,6 @@ lemma dec_highbound_invariantWhite: "spec dec_highbound_inv2 dec_highbound (GG i
     apply(intro get_rule;intro allI; simp)
     by (simp add: spec_def put_def put_state_def get_state_def xs_Env_def swap_def)
 
-(*I don't know if you can prove this using the approach, since the invariant gets violated if it is broken up into steps*)
 lemma dec_highbound_invariantBlue: "spec dec_highbound_inv3 dec_highbound (GG high_invariant_is_2_Env)"
     unfolding dec_highbound_inv3_def loop_update_action_pre_def GG_def high_invariant_is_2_Env_def
     apply(simp_all add: dec_highbound_def)
@@ -742,11 +760,9 @@ lemma loop_update_action_invariantBlue: "spec loop_update_action_inv3 loop_updat
      apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def xs_Env_def swap_def get_def return_def)
    apply(intro allI)
    apply (smt One_nat_def Suc_leI Suc_pred le_less length_list_update less_Suc_eq_0_disj less_imp_Suc_add less_le_trans nth_list_update value_must_be_two)
-   defer
    apply(simp add: inc_index_def)
     apply(intro get_rule; intro allI; simp)
    by (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
-
 
 lemma dnfp_aux1: "spec (\<lambda>y. length (xs e) = length (xs y)) (dnfp_mon v) (\<lambda>x y. length (xs e) = length (xs y))"
   apply(induction v rule: dnfp_mon.induct)
@@ -1180,8 +1196,178 @@ lemma dnfp_prepost: "spec (dnfp_pre e) (dnfp_mon n) (GG (dnfp_post e))"
   by(simp add: spec_def skip_def)
 
 
-text\<open>Invariants proof\<close>
-lemma dnfp_invariantRed: "spec loop_update_action_inv3 (dnfp_mon n) (GG high_invariant_is_2_Env)"
+subsection\<open>Invariants proof\<close>
 
+subsubsection\<open>Lemmas\<close>
+lemma dnfp_invariantRed_aux: "spec (\<lambda>e. \<forall>x<low e. xs e ! x = 0) (dnfp_mon v) (\<lambda>x e. \<forall>x<low e. xs e ! x = 0)"
+ apply(induction v rule: dnfp_mon.induct)
+    apply(simp add: spec_def)
+    apply (simp add: skip_def)
+    apply(simp add: spec_def)
+   apply (simp add: skip_def)
+  apply(simp only: caseN)
+  apply(intro get_rule; intro allI; clarify)
+  apply(intro cond_rule)
+  apply(simp add: loop_update_action_def)
+  apply(intro get_rule; intro allI; clarify)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. \<forall>x<low e. xs e ! x = 0)"])
+  apply(intro cond_rule)
+  apply(simp add: inc_lowbound_def)
+   apply(intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x e. xs e ! low e = 0 \<and>  (\<forall>x<low e. xs e ! x = 0))"])
+       apply (simp add: spec_def put_def put_state_def swap_def get_state_def xs_Env_def run_state_def)
+
+       defer
+       apply(intro allI; simp)
+  apply(intro get_rule; intro allI)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. \<forall>x<low e. xs e ! x = 0)"])
+        apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def run_state_def)
+  sledgehammer
+  defer
+   apply(intro allI; simp)
+   apply(intro get_rule; intro allI)
+        apply(simp add: spec_def put_def low_Env_def put_state_def get_state_def run_state_def)
+  sledgehammer
+  defer
+  apply(simp add: dec_highbound_def)
+   apply(intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x y. \<forall>x<low e. xs e ! x = 0)"])
+         apply(simp add: spec_def put_def high_Env_def put_state_def get_state_def)
+  sledgehammer
+  defer
+   apply(intro allI; simp)
+  apply(intro get_rule; intro allI; simp)
+         apply(simp add: spec_def put_def xs_Env_def swap_def put_state_def get_state_def)
+  defer
+  apply(simp add: inc_index_def)
+  apply(intro get_rule; intro allI; simp)
+    apply(simp add: spec_def put_def i_Env_def put_state_def get_state_def)
+  sorry
+
+lemma dnfp_invariantWhite_aux: "spec (\<lambda>e. \<forall>x. low e \<le> x \<and> x < i e \<longrightarrow> xs e ! x = Suc 0) (dnfp_mon v) (\<lambda>x e. \<forall>x. low e \<le> x \<and> x < i e \<longrightarrow> xs e ! x = Suc 0)"
+  sorry
+
+lemma dnfp_invariantBlue_aux: "spec (\<lambda>e. \<forall>x \<ge> high e. xs e ! x = 2) (dnfp_mon v) (\<lambda>x e. \<forall>x \<ge> high e. xs e ! x = 2)"
+  sorry
+
+lemma dnfp_invariantRed: "spec dnfp_inv1 (dnfp_mon n) (GG low_invariant_is_0_Env)"
+  unfolding dnfp_inv1_def dnfp_pre_aux_def  GG_def low_invariant_is_0_Env_def
+  apply(induction n rule: dnfp_mon.induct)
+    apply(simp add: spec_def)
+    apply(simp add: skip_def)
+    apply(simp add: spec_def)
+   apply(simp add: skip_def)
+  apply(simp only: caseN)
+   apply(intro get_rule; intro allI; clarify)
+  apply(intro cond_rule)
+  apply(simp add: loop_update_action_def)
+   apply(intro get_rule; intro allI; clarify)
+  apply(intro seq_rule[of _ _ "(\<lambda>x e. \<forall>x<low e. xs e ! x = 0)"])
+  apply(intro cond_rule)
+ apply(simp add: inc_lowbound_def)
+     apply (intro get_rule; intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x e. xs e ! low e = 0 \<and>  (\<forall>x<low e. xs e ! x = 0))"])
+      apply (simp add: spec_def put_def put_state_def swap_def get_state_def xs_Env_def)
+   apply auto[1]
+  apply(intro allI; simp)
+  apply(intro get_rule; intro allI)
+  apply(intro seq_rule[of _ _ "(\<lambda>x e. xs e ! low e = 0 \<and> (\<forall>x<low e. xs e ! x = 0))"])
+   apply (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
+  apply(intro allI; simp)
+  apply(intro get_rule; intro allI)
+     apply (simp add: spec_def put_def put_state_def get_state_def low_Env_def)
+   using less_antisym apply blast
+     apply(simp add: dec_highbound_def)
+     apply (intro get_rule; intro allI; simp)
+      apply(intro seq_rule[of _ _ "(\<lambda>x e. (\<forall>x<low e. xs e ! x = 0) \<and> high e \<le> length (xs e) \<and> high e \<ge> i e \<and> low e \<le> i e)"]) 
+       apply (simp add: spec_def get_def put_def get_state_def put_state_def high_Env_def)
+       apply(linarith)
+      apply(intro allI; simp)
+     apply (intro get_rule; intro allI; simp)
+      apply (simp add: spec_def get_def put_def get_state_def put_state_def xs_Env_def swap_def)
+     apply(simp add: inc_index_def)
+     apply (intro get_rule; intro allI; simp)
+     apply (simp add: spec_def get_def put_def get_state_def put_state_def i_Env_def)
+    apply(intro allI; simp)
+   using dnfp_invariantRed_aux apply blast
+    apply(simp add: spec_def)
+   by(simp add: skip_def)
+
+lemma dnfp_invariantWhite: "spec dnfp_inv2 (dnfp_mon n) (GG invariant_low_to_j_is_1_Env)"
+  unfolding dnfp_inv2_def dnfp_pre_aux_def  GG_def invariant_low_to_j_is_1_Env_def
+  apply(induction n rule: dnfp_mon.induct)
+    apply(simp add: spec_def)
+    apply(simp add: skip_def)
+    apply(simp add: spec_def)
+   apply(simp add: skip_def)
+  apply(simp only: caseN)
+   apply(intro get_rule; intro allI; clarify)
+  apply(intro cond_rule)
+  apply(simp add: loop_update_action_def)
+   apply(intro get_rule; intro allI; clarify)
+  apply(intro seq_rule[of _ _ "(\<lambda>x e. \<forall>x. low e \<le> x \<and> x < i e \<longrightarrow> xs e ! x = Suc 0)"])
+  apply(intro cond_rule)
+     apply(simp add: inc_lowbound_def)
+     apply (intro get_rule; intro allI; simp)
+   apply (simp add: spec_def put_def put_state_def  get_state_def xs_Env_def swap_def get_def i_Env_def low_Env_def return_def)
+   apply(intro allI)
+     apply (simp add: nth_list_update)
+     apply(simp add: dec_highbound_def)
+        apply(intro get_rule; intro allI; simp)
+    apply(intro seq_rule[of _ _ "(\<lambda>x e. low e \<le> i e \<and> high e \<ge> i e \<and> length (xs e) > high e \<and> (\<forall>x. low e \<le> x \<and> x < i e \<longrightarrow> xs e ! x = Suc 0))"])
+     apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def swap_def)
+    apply linarith
+     apply(intro allI; simp)
+    apply(intro get_rule;intro allI; simp)
+   apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def swap_def)
+   apply(simp add: inc_index_def)
+   apply(intro get_rule;intro allI; simp)
+   apply (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
+    apply(intro allI)
+    apply (metis Suc_lessI less_SucE)
+  apply(intro allI)
+   using dnfp_invariantWhite_aux apply blast
+    apply(simp add: spec_def)
+   by(simp add: skip_def)
+
+lemma dnfp_invariantBlue: "spec dnfp_inv3 (dnfp_mon n) (GG high_invariant_is_2_Env)"
+  unfolding dnfp_inv3_def dnfp_pre_aux_def  GG_def high_invariant_is_2_Env_def
+  apply(induction n rule: dnfp_mon.induct)
+    apply(simp add: spec_def)
+    apply(simp add: skip_def)
+    apply(simp add: spec_def)
+   apply(simp add: skip_def)
+  apply(simp only: caseN)
+   apply(intro get_rule; intro allI; clarify)
+  apply(intro cond_rule)
+  apply(simp add: loop_update_action_def)
+   apply(intro get_rule; intro allI; clarify)
+  apply(intro seq_rule[of _ _ "(\<lambda>x e. \<forall>x \<ge> high e. xs e ! x = 2)"])
+   apply (intro cond_rule)
+     apply(simp add: inc_lowbound_def) 
+     apply(intro get_rule;intro allI; simp)
+  apply(intro seq_rule[of _ _ "(\<lambda>x e. \<forall>x \<ge> high e. xs e ! x = 2)"])
+   apply (simp add: spec_def put_def put_state_def swap_def get_state_def xs_Env_def)
+  apply(intro allI; simp)
+  apply(intro get_rule; intro allI)
+  apply(intro seq_rule[of _ _ "(\<lambda>x e. \<forall>x \<ge> high e. xs e ! x = 2)"])
+   apply (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
+  apply(intro allI; simp)
+  apply(intro get_rule; intro allI)
+     apply (simp add: spec_def put_def put_state_def get_state_def low_Env_def)
+    apply(simp_all add: dec_highbound_def)
+     apply(intro get_rule; intro allI)
+     apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def xs_Env_def swap_def get_def return_def run_state_def)
+     apply(intro allI)
+  sledgehammer
+   apply (smt One_nat_def Suc_leI Suc_pred le_less length_list_update less_Suc_eq_0_disj less_imp_Suc_add less_le_trans nth_list_update value_must_be_two)
+   defer
+   apply(simp add: inc_index_def)
+    apply(intro get_rule; intro allI; simp)
+     apply (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
+   using dnfp_invariantBlue_aux apply blast
+  apply(simp add: spec_def)
+   apply(simp add: skip_def)
+   sorry
 
 end
