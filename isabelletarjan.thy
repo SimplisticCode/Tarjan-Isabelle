@@ -248,7 +248,7 @@ definition insert_gray_post:: "'v env \<Rightarrow> 'v \<Rightarrow>  'v env \<R
                             \<and> sn e = sn e2
                             \<and> black e = black e2
                             \<and> num e = num e2
-                            \<and> card (gray e) \<le> card (gray e2)"
+                            \<and> (card (gray e)) \<le> card (gray e2)"
 
 lemma gray_inc: "spec (insert_gray_pre e x) (insert_gray x) (GG (insert_gray_post e x))"
   unfolding insert_gray_pre_def GG_def insert_gray_post_def
@@ -290,6 +290,19 @@ definition update_num:: "'v \<Rightarrow> ('v env, unit) state" where
       put num_Env (num (x := int(sn)))
 }"
 
+subsubsection\<open>update_num lemma\<close>
+definition update_num_pre:: "'v \<Rightarrow>'v env \<Rightarrow> bool" where
+"update_num_pre x e \<equiv> num e x = -1"
+
+definition update_num_post:: "'v \<Rightarrow> 'v env \<Rightarrow> bool" where
+"update_num_post x e\<equiv> num e x \<noteq> -1"
+
+lemma update_num_spec: "spec (update_num_pre x) (update_num x) (GG (update_num_post x))"
+  unfolding update_num_pre_def GG_def update_num_post_def
+  apply(simp add: update_num_def)
+  apply(intro get_rule; intro allI; simp)
+  by(simp add: spec_def put_def get_state_def num_Env_def put_state_def)
+
 definition add_stack_incr:: "'v \<Rightarrow> ('v env, unit) state" where
 "add_stack_incr x = do {
     insert_gray x;
@@ -302,7 +315,6 @@ subsubsection\<open>Add_stack_incr lemmas\<close>
 definition add_stack_incr_pre:: "'v \<Rightarrow> 'v env \<Rightarrow> 'v env \<Rightarrow> bool" where
 "add_stack_incr_pre x e s \<equiv> e = s
                           \<and> x \<in> vertices
-                          \<and> x \<notin> gray e
                           \<and> x \<notin> black e
                           \<and> x \<notin> set(stack e)
                           \<and> (num e) x = -1"
@@ -311,17 +323,105 @@ definition add_stack_incr_post:: "'v \<Rightarrow> 'v env \<Rightarrow> 'v env \
 "add_stack_incr_post x e e2 \<equiv> 
                           x \<in> gray e2
                           \<and> x \<in> vertices
-                          \<and> x \<in> black e2
                           \<and> x \<in> set(stack e2)
-                          \<and> (num e2) x \<noteq> -1"
+                          \<and> (num e2) x \<noteq> -1
+                          \<and> sn e < sn e2
+                          \<and> card (gray e) \<le> card(gray e2)"
 
 lemma add_stack_incr_spec: "spec (add_stack_incr_pre x e) (add_stack_incr x) (GG (add_stack_incr_post x e))"
   unfolding add_stack_incr_pre_def GG_def add_stack_incr_post_def
   apply(simp add:add_stack_incr_def)
   apply(simp add: insert_gray_def)
   apply(intro get_rule; intro allI; simp)
-  apply(simp add: gray_Env_def put_def get_def get_state_def put_state_def)
-  apply (intro seq_rule[of _ _ "(\<lambda>_ e2. x \<in> gray e2 \<and> x \<in> vertices \<and> x \<in> black e2 \<and> x \<in> set (stack e2) \<and> num e2 x \<noteq> - 1)"])
+  apply(intro conj_rule_right)
+  apply (intro seq_rule[of _ _ "(\<lambda>xa y. x \<in> gray y)"])
+       apply(simp add: spec_def gray_Env_def put_def get_def get_state_def put_state_def)
+  apply(simp add: insert_stack_def)
+  apply(intro get_rule; intro allI)
+  apply (intro seq_rule[of _ _ "(\<lambda>xa y. x \<in> gray y)"])
+       apply(simp add: spec_def stack_Env_def put_def get_def get_state_def put_state_def)
+  apply(intro allI; simp)
+  apply(simp add: count_up_sn_def)
+  apply(intro get_rule; intro allI)
+  apply (intro seq_rule[of _ _ "(\<lambda>xa y. x \<in> gray y)"])
+  apply(simp add: spec_def sn_Env_def put_def get_def get_state_def put_state_def)
+  apply(intro allI; simp)
+  apply(simp add: update_num_def)
+  apply(intro get_rule; intro allI; simp)
+  apply(simp add: spec_def num_Env_def put_def get_def get_state_def put_state_def)
+  apply (intro seq_rule[of _ _ "(\<lambda>xa y. x \<in> vertices)"])
+   apply(simp add: spec_def gray_Env_def put_def get_def get_state_def put_state_def)
+     apply(intro allI; simp)
+  apply(simp add: insert_stack_def)
+  apply(intro get_rule; intro allI)
+  apply(simp add: spec_def num_Env_def put_def get_def get_state_def put_state_def)
+  apply (intro seq_rule[of _ _ "(\<lambda>xa y. x \<in> vertices)"])
+   apply(simp add: spec_def gray_Env_def put_def get_def get_state_def put_state_def)
+    apply(intro allI; simp)
+  apply(simp add: insert_stack_def)
+  apply(intro get_rule; intro allI)
+  apply (intro seq_rule[of _ _ "(\<lambda>xa y. x \<in> set (stack y))"])
+    apply(simp add: spec_def stack_Env_def put_def get_def get_state_def put_state_def)
+     apply(intro allI; simp)
+  apply(simp add: count_up_sn_def)
+     apply(intro get_rule; intro allI)
+  apply (intro seq_rule[of _ _ "(\<lambda>xa y. x \<in> set (stack y))"])
+   apply(simp add: spec_def sn_Env_def put_def get_def get_state_def put_state_def)
+     apply(intro allI; simp)
+  apply(simp add: update_num_def)
+  apply(intro get_rule; intro allI; simp)
+     apply(simp add: spec_def num_Env_def put_def get_def get_state_def put_state_def)
+  apply (intro seq_rule[of _ _ "(\<lambda>xa y. num y x \<noteq> -1)"])
+     apply(simp add: spec_def gray_Env_def put_def get_def get_state_def put_state_def)
+  sledgehammer
+     defer
+  apply(simp add: insert_stack_def)
+     apply(intro get_rule; intro allI)
+     apply (intro seq_rule[of _ _ "(\<lambda>xa y. num y x \<noteq> -1)"])
+      apply(simp add: spec_def stack_Env_def put_def get_def get_state_def put_state_def)
+     apply(intro allI; simp)
+     apply(simp add: count_up_sn_def)
+     apply(intro get_rule; intro allI)
+     apply (intro seq_rule[of _ _ "(\<lambda>xa y. num y x \<noteq> -1)"])
+     apply(simp add: spec_def sn_Env_def put_def get_def get_state_def put_state_def)
+     apply(intro allI; simp)
+     apply(simp add: update_num_def)
+     apply(intro get_rule; intro allI; simp)
+     apply(simp add: spec_def num_Env_def put_def get_def get_state_def put_state_def)
+     apply (intro seq_rule[of _ _ "(\<lambda>xa y.  sn e \<le> sn y)"])
+     apply(simp add: spec_def gray_Env_def put_def get_def get_state_def put_state_def)
+     apply(intro allI; simp)
+     apply(simp add: insert_stack_def)
+     apply(intro get_rule; intro allI)
+     apply (intro seq_rule[of _ _ "(\<lambda>xa y.  sn e \<le> sn y)"])
+     apply(simp add: spec_def stack_Env_def put_def get_def get_state_def put_state_def)
+     apply(intro allI; simp)
+     apply(simp add: count_up_sn_def)
+     apply(intro get_rule; intro allI)
+     apply (intro seq_rule[of _ _ "(\<lambda>xa y.  sn e < sn y)"])
+     apply(simp add: spec_def sn_Env_def put_def get_def get_state_def put_state_def)
+     apply(intro allI; simp)
+     apply(simp add: update_num_def)
+     apply(intro get_rule; intro allI; simp)
+     apply(simp add: spec_def num_Env_def put_def get_def get_state_def put_state_def)
+     apply (intro seq_rule[of _ _ "(\<lambda>xa y. card (gray e) \<le> card (gray y))"])
+    apply(simp add: spec_def gray_Env_def put_def get_def get_state_def put_state_def)
+  apply (metis card_infinite card_insert_le zero_le)
+  apply(intro allI; simp)
+     apply(simp add: insert_stack_def)
+   apply(intro get_rule; intro allI)
+     apply (intro seq_rule[of _ _ "(\<lambda>xa y. card (gray e) \<le> card (gray y))"])
+    apply(simp add: spec_def stack_Env_def put_def get_def get_state_def put_state_def)
+  apply(intro allI; simp)
+     apply(simp add: count_up_sn_def)
+   apply(intro get_rule; intro allI)
+   apply (intro seq_rule[of _ _ "(\<lambda>xa y. card (gray e) \<le> card (gray y))"])
+    apply(simp add: spec_def sn_Env_def put_def get_def get_state_def put_state_def)
+  apply(intro allI; simp)
+     apply(simp add: update_num_def)
+   apply(intro get_rule; intro allI; simp)
+     apply(simp add: spec_def num_Env_def put_def get_def get_state_def put_state_def)
+
 sorry
 
 text \<open>
