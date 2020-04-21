@@ -137,19 +137,19 @@ text\<open>This can be used in the other pre and post-conditions for the methods
 subsection\<open>Pre- and Postconditions\<close>
 
 subsubsection\<open>Pre-conditions\<close>
-definition dnfp_pre:: "env \<Rightarrow> env \<Rightarrow> bool" where
-"dnfp_pre e s \<equiv> s = e
-              \<and> high e \<ge> i e
-              \<and> i e \<ge> low e 
-              \<and> length (xs e) \<ge> high e
-              \<and> set (xs e) \<subseteq> {1,2,3}"
-
-definition dnfp_pre_aux:: "env \<Rightarrow> bool" where
-"dnfp_pre_aux e \<equiv> 
+definition dnfp_pre_aux:: "nat \<Rightarrow> env \<Rightarrow> bool" where
+"dnfp_pre_aux n e \<equiv> 
               high e \<ge> i e
               \<and> i e \<ge> low e 
               \<and> length (xs e) \<ge> high e
-              \<and> set (xs e) \<subseteq> {1,2,3}"
+              \<and> high e - i e = n
+              \<and> set (xs e) \<subseteq> {1,2,3}
+              \<and> invariants_Env e"
+
+definition dnfp_pre:: "nat \<Rightarrow> env \<Rightarrow> env \<Rightarrow> bool" where
+"dnfp_pre n e s \<equiv> s = e
+              \<and> dnfp_pre_aux n e"
+
 
 definition loop_update_action_pre:: "env \<Rightarrow> bool" where
 "loop_update_action_pre e \<equiv> high e > i e
@@ -266,26 +266,26 @@ definition inc_index_post:: "env \<Rightarrow> env \<Rightarrow> bool" where
                       \<and> Suc(i e) = i e'
                       \<and> loop_update_action_post e e'"
 
-text\<open>Is it after one iteration of after completion?\<close>
 definition dnfp_post where 
 "dnfp_post e e2 \<equiv> length (xs e) = length (xs e2)
                   \<and> high e \<ge> high e2
                   \<and> low e \<le> low e2
                   \<and> i e \<le> i e2
                   \<and> high e - i e \<ge> high e2 - i e2
-                  \<and> mset (xs e) = mset (xs e2)"
-                  (*\<and> i e2 = high e2*)
+                  \<and> mset (xs e) = mset (xs e2)
+                  \<and> high e2 = i e2"
+(*This needs to change a little bit*)
 
-definition dnfp_inv1:: "env \<Rightarrow> bool" where 
-"dnfp_inv1 e \<equiv> dnfp_pre_aux e
+definition dnfp_inv1:: "nat \<Rightarrow> env \<Rightarrow> bool" where 
+"dnfp_inv1 n e \<equiv> dnfp_pre_aux n e
                 \<and> low_invariant_is_0_Env e"
 
-definition dnfp_inv2:: "env \<Rightarrow> bool" where 
-"dnfp_inv2 e \<equiv> dnfp_pre_aux e
+definition dnfp_inv2:: "nat \<Rightarrow> env \<Rightarrow> bool" where 
+"dnfp_inv2 n e \<equiv> dnfp_pre_aux n e
                 \<and> invariant_low_to_j_is_1_Env e"
 
-definition dnfp_inv3:: "env \<Rightarrow> bool" where
-"dnfp_inv3 e \<equiv> dnfp_pre_aux e
+definition dnfp_inv3:: "nat \<Rightarrow> env \<Rightarrow> bool" where
+"dnfp_inv3 n e \<equiv> dnfp_pre_aux n e
                 \<and> high_invariant_is_2_Env e"
 
 end
