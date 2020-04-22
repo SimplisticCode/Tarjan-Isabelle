@@ -174,9 +174,24 @@ lemma inc_lowbound_invariantWhite: "spec inc_lowbound_inv2_aux inc_lowbound (GG 
   unfolding inc_lowbound_inv2_aux_def inc_lowbound_inv2_def loop_update_action_pre_def  GG_def invariant_low_to_j_is_1_Env_def dnfp_precondition_def
   apply(simp_all add: inc_lowbound_def)
   apply(intro get_rule; intro allI; simp)
-   apply (simp add: spec_def put_def put_state_def  get_state_def xs_Env_def swap_def get_def i_Env_def low_Env_def return_def)
-  apply(intro allI)
-  by (smt Suc_leD le_neq_implies_less less_Suc_eq less_trans nth_list_update set_swap)
+  apply(intro seq_rule[of _ _ "(\<lambda>x s. i s < high s \<and>
+                 low s \<le> i s \<and>
+                 high s \<le> length (xs s) \<and>
+                 set (xs s) \<subseteq> {0, 1, 2} \<and>
+                 (\<forall>x. low s < x \<and> x \<le> i s \<longrightarrow> xs s ! x = 1))"])
+   apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def swap_def)
+  apply (smt le_less less_le_trans nth_list_update set_swap)
+   apply(intro allI; simp)
+  apply(intro get_rule; intro allI)
+  apply(intro seq_rule[of _ _ "(\<lambda>x s. i s \<le> high s \<and>
+                 low s < i s \<and>
+                 high s \<le> length (xs s) \<and>
+                 set (xs s) \<subseteq> {0, 1, 2} \<and>
+                 (\<forall>x. low s < x \<and> x < i s \<longrightarrow> xs s ! x = 1))"])
+   apply (simp add: spec_def put_def put_state_def  get_state_def i_Env_def)
+   apply(intro allI; simp)
+  apply(intro get_rule; intro allI)
+  by (simp add: spec_def put_def put_state_def  get_state_def low_Env_def)
 
 definition inc_lowbound_inv3_aux:: "env \<Rightarrow> bool" where
 "inc_lowbound_inv3_aux e \<equiv> inc_lowbound_inv3 e \<and> loop_update_action_pre e \<and> xs e ! i e < 1"
@@ -555,7 +570,7 @@ lemma loop_update_action_invariantWhite: "spec loop_update_action_inv2_aux loop_
    apply (intro cond_rule)
      apply(simp add: inc_lowbound_def)
      apply (intro get_rule; intro allI; simp)
-   apply (simp add: spec_def put_def put_state_def  get_state_def xs_Env_def swap_def get_def i_Env_def low_Env_def return_def)
+   apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def swap_def get_def i_Env_def low_Env_def return_def)
    apply(intro allI)
      apply (simp add: nth_list_update)
      apply(simp add: dec_highbound_def)
