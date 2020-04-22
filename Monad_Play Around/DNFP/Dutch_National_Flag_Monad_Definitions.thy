@@ -137,13 +137,16 @@ text\<open>This can be used in the other pre and post-conditions for the methods
 subsection\<open>Pre- and Postconditions\<close>
 
 subsubsection\<open>Pre-conditions\<close>
+definition dnfp_precondition:: "env \<Rightarrow> bool" where
+"dnfp_precondition e \<equiv> high e \<ge> i e
+                      \<and> i e \<ge> low e 
+                      \<and> length (xs e) \<ge> high e
+                      \<and> set (xs e) \<subseteq> {1,2,3}"
+
 definition dnfp_pre_aux:: "nat \<Rightarrow> env \<Rightarrow> bool" where
 "dnfp_pre_aux n e \<equiv> 
-              high e \<ge> i e
-              \<and> i e \<ge> low e 
-              \<and> length (xs e) \<ge> high e
+              dnfp_precondition e
               \<and> high e - i e = n
-              \<and> set (xs e) \<subseteq> {1,2,3}
               \<and> invariants_Env e"
 
 definition dnfp_pre:: "nat \<Rightarrow> env \<Rightarrow> env \<Rightarrow> bool" where
@@ -152,12 +155,9 @@ definition dnfp_pre:: "nat \<Rightarrow> env \<Rightarrow> env \<Rightarrow> boo
 
 
 definition loop_update_action_pre:: "env \<Rightarrow> bool" where
-"loop_update_action_pre e \<equiv> high e > i e
-                             \<and> length (xs e) > (Suc 0)
+"loop_update_action_pre e \<equiv> dnfp_precondition e
                              \<and> length (xs e) \<ge> high e
-                             \<and> low e < high e
-                             \<and> low e \<le> i e
-                             \<and> set (xs e) \<subseteq> {0,1,2}"
+"
 
 definition loop_update_action_pre_aux:: "env \<Rightarrow> env \<Rightarrow> bool" where
 "loop_update_action_pre_aux e s \<equiv> s = e
@@ -175,12 +175,17 @@ definition loop_update_action_inv3 where
 "loop_update_action_inv3 e \<equiv> loop_update_action_pre e 
                               \<and> high_invariant_is_2_Env e"
 
+definition dnfp_post where 
+"dnfp_post e e2 \<equiv> length (xs e) = length (xs e2)
+                  \<and> high e \<ge> high e2
+                  \<and> low e \<le> low e2
+                  \<and> i e \<le> i e2
+                  \<and> high e - i e \<ge> high e2 - i e2
+                  \<and> mset (xs e) = mset (xs e2)"
+(*This needs to change a little bit*)
+
 definition loop_update_action_post where
-"loop_update_action_post e e' \<equiv> length (xs e) = length (xs e')
-                                \<and> high e \<ge> high e'
-                                \<and> low e \<le> low e'
-                                \<and> i e \<le> i e'
-                                \<and> high e - i e > high e' - i e'"
+"loop_update_action_post e e' \<equiv> dnfp_post e e'"
 
 definition inc_lowbound_pre:: "env \<Rightarrow> env \<Rightarrow> bool" where 
 "inc_lowbound_pre e s \<equiv> s = e
@@ -205,40 +210,40 @@ definition inc_lowbound_inv3 :: "env \<Rightarrow> bool" where
 definition dec_highbound_pre where 
 "dec_highbound_pre e s\<equiv> e = s
                         \<and> loop_update_action_pre e 
-                        \<and> (xs e)!(i e) = 2"
+                        \<and> (xs e)!(i e) > 1"
 
 definition dec_highbound_inv1 where 
 "dec_highbound_inv1 e \<equiv> loop_update_action_pre e 
-                        \<and> (xs e)!(i e) = 2
-                        \<and> (xs e)!(high e) = 2
+                        \<and> (xs e)!(i e) > 1
                         \<and> low_invariant_is_0_Env e"
 
 definition dec_highbound_inv2 where 
 "dec_highbound_inv2 e \<equiv> loop_update_action_pre e 
-                        \<and> (xs e)!(i e) = 2
-                        \<and> (xs e)!(high e) = 2
+                        \<and> (xs e)!(i e) > 1
                         \<and> invariant_low_to_j_is_1_Env e"
 
 definition dec_highbound_inv3 where 
 "dec_highbound_inv3 e \<equiv> loop_update_action_pre e 
-                        \<and> (xs e)!(i e) = 2
-                        \<and> (xs e)!(high e) = 2
+                        \<and> (xs e)!(i e) > 1
                         \<and> high_invariant_is_2_Env e"
 
 definition inc_index_pre:: "env \<Rightarrow> env \<Rightarrow> bool" where 
 "inc_index_pre e s \<equiv> e = s 
                       \<and> loop_update_action_pre e
-                      \<and> (xs e)!(i e) = 1"
+                      \<and> \<not>(xs e)!(i e) > 1
+                      \<and> \<not>(xs e)!(i e) < 1"
 
 definition inc_index_inv1:: "env \<Rightarrow> bool" where 
 "inc_index_inv1 e \<equiv> loop_update_action_pre e
-                    \<and> (xs e)!(i e) = 1
-                    \<and> low_invariant_is_0_Env e"
+                      \<and> \<not>(xs e)!(i e) > 1
+                      \<and> \<not>(xs e)!(i e) < 1
+                      \<and> low_invariant_is_0_Env e"
 
 definition inc_index_inv2:: "env \<Rightarrow> bool" where 
 "inc_index_inv2 e \<equiv> loop_update_action_pre e
-                    \<and> (xs e)!(i e) = 1
-                    \<and> invariant_low_to_j_is_1_Env e"
+                      \<and> \<not>(xs e)!(i e) > 1
+                      \<and> \<not>(xs e)!(i e) < 1
+                      \<and> invariant_low_to_j_is_1_Env e"
 
 definition inc_index_inv3:: "env \<Rightarrow> bool" where
 "inc_index_inv3 e \<equiv> loop_update_action_pre e
@@ -254,7 +259,7 @@ definition inc_lowbound_post:: "env \<Rightarrow> env \<Rightarrow> bool" where
 
 definition dec_highbound_post where 
 "dec_highbound_post e e' \<equiv> length (xs e) > high e' 
-                              \<and> high e = Suc (high e') 
+                              \<and> high e < high e' 
                               \<and> low e = low e'
                               \<and> i e = i e'
                               \<and> (xs e')!(high e') = 2
@@ -263,18 +268,8 @@ definition dec_highbound_post where
 definition inc_index_post:: "env \<Rightarrow> env \<Rightarrow> bool" where 
 "inc_index_post e e' \<equiv> high e = high e' 
                       \<and> low e = low e'
-                      \<and> Suc(i e) = i e'
+                      \<and> i e < i e'
                       \<and> loop_update_action_post e e'"
-
-definition dnfp_post where 
-"dnfp_post e e2 \<equiv> length (xs e) = length (xs e2)
-                  \<and> high e \<ge> high e2
-                  \<and> low e \<le> low e2
-                  \<and> i e \<le> i e2
-                  \<and> high e - i e \<ge> high e2 - i e2
-                  \<and> mset (xs e) = mset (xs e2)
-                  \<and> high e2 = i e2"
-(*This needs to change a little bit*)
 
 definition dnfp_inv1:: "nat \<Rightarrow> env \<Rightarrow> bool" where 
 "dnfp_inv1 n e \<equiv> dnfp_pre_aux n e
