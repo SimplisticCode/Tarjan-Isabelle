@@ -630,4 +630,14 @@ lemma loop_update_action_invariantBlue: "spec loop_update_action_inv3_aux loop_u
     apply(intro get_rule; intro allI; simp)
    by (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
 
+definition loop_update_action_inv :: "env \<Rightarrow> bool" where
+"loop_update_action_inv s \<equiv> (loop_update_action_inv3 s \<and> loop_update_action_inv2 s \<and> loop_update_action_inv1 s)"
+
+definition loop_update_action_inv_aux :: "env \<Rightarrow> bool" where
+"loop_update_action_inv_aux s \<equiv> (loop_update_action_inv s \<and> loop_update_action_pre s)"
+
+lemma loop_update_action_invariants: "spec loop_update_action_inv_aux loop_update_action (GG loop_update_action_inv)"
+  unfolding loop_update_action_inv_aux_def GG_def loop_update_action_inv_def
+  by (smt GG_def case_prodD case_prodI2 loop_update_action_inv1_aux_def loop_update_action_inv2_aux_def loop_update_action_inv3_aux_def loop_update_action_invariantBlue loop_update_action_invariantRed loop_update_action_invariantWhite spec_def)
+
 end

@@ -132,8 +132,7 @@ definition dnfp_precondition:: "env \<Rightarrow> bool" where
 definition dnfp_pre_aux:: "nat \<Rightarrow> env \<Rightarrow> bool" where
 "dnfp_pre_aux n e \<equiv> 
               dnfp_precondition e
-              \<and> high e - i e = n
-              \<and> invariants_Env e"
+              \<and> high e - i e = n"
 
 definition dnfp_pre:: "nat \<Rightarrow> env \<Rightarrow> env \<Rightarrow> bool" where
 "dnfp_pre n e s \<equiv> s = e
@@ -244,16 +243,16 @@ definition inc_index_post:: "env \<Rightarrow> env \<Rightarrow> bool" where
                       \<and> i e < i e'
                       \<and> loop_update_action_post e e'"
 
-definition dnfp_inv1:: "nat \<Rightarrow> env \<Rightarrow> bool" where 
-"dnfp_inv1 n e \<equiv> dnfp_pre_aux n e
+definition dnfp_inv1:: "env \<Rightarrow> bool" where 
+"dnfp_inv1  e \<equiv> dnfp_precondition e
                 \<and> low_invariant_is_0_Env e"
 
-definition dnfp_inv2:: "nat \<Rightarrow> env \<Rightarrow> bool" where 
-"dnfp_inv2 n e \<equiv> dnfp_pre_aux n e
+definition dnfp_inv2:: "env \<Rightarrow> bool" where 
+"dnfp_inv2 e \<equiv> dnfp_precondition e
                 \<and> invariant_low_to_j_is_1_Env e"
 
-definition dnfp_inv3:: "nat \<Rightarrow> env \<Rightarrow> bool" where
-"dnfp_inv3 n e \<equiv> dnfp_pre_aux n e
+definition dnfp_inv3:: "env \<Rightarrow> bool" where
+"dnfp_inv3 e \<equiv> dnfp_precondition e
                 \<and> high_invariant_is_2_Env e"
 
 end
