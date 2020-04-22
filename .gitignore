@@ -5,3 +5,4 @@ output/*
 example/rewrite_example.sml
 .DS_Store
 *.thy~
+*.zip
