@@ -104,15 +104,6 @@ value \<open>sorted(xs(snd(run_state (dnfp_mon 3) (init_env[2,1,0]))))\<close>
 section\<open>Definiton of all the Pre and postconditions\<close>
 
 subsection\<open>The invariants are taken from https://en.wikipedia.org/wiki/Dutch_national_flag_problem\<close>
-definition low_invariant_is_0 where
-"low_invariant_is_0 arr l \<equiv> (\<forall>x. x < l \<longrightarrow> arr!x = 0)"
-
-definition invariant_low_to_j_is_1 where
-"invariant_low_to_j_is_1 arr l j \<equiv> (\<forall>x. (x \<ge> l \<and> x < j) \<longrightarrow> arr!x = 1)"
-
-definition high_invariant_is_2 where
-"high_invariant_is_2 arr h\<equiv> (\<forall>x. x \<ge> h \<longrightarrow> arr!x = 2)"
-
 definition low_invariant_is_0_Env where
 "low_invariant_is_0_Env e \<equiv> (\<forall>x. x < (low e) \<longrightarrow> (xs e)!x = 0)"
 
@@ -127,11 +118,6 @@ definition invariants_Env:: "env \<Rightarrow> bool" where
               \<and> invariant_low_to_j_is_1_Env e
               \<and> low_invariant_is_0_Env e"
 
-definition invariants where
-"invariants arr l j h\<equiv> low_invariant_is_0 arr l
-              \<and> invariant_low_to_j_is_1 arr l j
-              \<and> high_invariant_is_2 arr h"
-
 text\<open>This can be used in the other pre and post-conditions for the methods inside loop_update_actions\<close>
 
 subsection\<open>Pre- and Postconditions\<close>
@@ -141,7 +127,7 @@ definition dnfp_precondition:: "env \<Rightarrow> bool" where
 "dnfp_precondition e \<equiv> high e \<ge> i e
                       \<and> i e \<ge> low e 
                       \<and> length (xs e) \<ge> high e
-                      \<and> set (xs e) \<subseteq> {1,2,3}"
+                      \<and> set (xs e) \<subseteq> {0,1,2}"
 
 definition dnfp_pre_aux:: "nat \<Rightarrow> env \<Rightarrow> bool" where
 "dnfp_pre_aux n e \<equiv> 
@@ -155,24 +141,22 @@ definition dnfp_pre:: "nat \<Rightarrow> env \<Rightarrow> env \<Rightarrow> boo
 
 
 definition loop_update_action_pre:: "env \<Rightarrow> bool" where
-"loop_update_action_pre e \<equiv> dnfp_precondition e
-                             \<and> length (xs e) \<ge> high e
-"
+"loop_update_action_pre e \<equiv> dnfp_precondition e \<and> high e > i e"
 
 definition loop_update_action_pre_aux:: "env \<Rightarrow> env \<Rightarrow> bool" where
 "loop_update_action_pre_aux e s \<equiv> s = e
                               \<and> loop_update_action_pre e"
 
 definition loop_update_action_inv1 where 
-"loop_update_action_inv1 e \<equiv> loop_update_action_pre e 
+"loop_update_action_inv1 e \<equiv> dnfp_precondition e 
                             \<and> low_invariant_is_0_Env e"
 
 definition loop_update_action_inv2 where 
-"loop_update_action_inv2 e \<equiv> loop_update_action_pre e 
+"loop_update_action_inv2 e \<equiv> dnfp_precondition e 
                               \<and> invariant_low_to_j_is_1_Env e"
 
 definition loop_update_action_inv3 where 
-"loop_update_action_inv3 e \<equiv> loop_update_action_pre e 
+"loop_update_action_inv3 e \<equiv> dnfp_precondition e 
                               \<and> high_invariant_is_2_Env e"
 
 definition dnfp_post where 
@@ -193,18 +177,15 @@ definition inc_lowbound_pre:: "env \<Rightarrow> env \<Rightarrow> bool" where
                         \<and> (xs s)!(i s) < 1"
 
 definition inc_lowbound_inv1 :: "env \<Rightarrow> bool" where
-"inc_lowbound_inv1 s \<equiv> loop_update_action_pre s
-                        \<and> (xs s)!(i s) < 1
+"inc_lowbound_inv1 s \<equiv> dnfp_precondition s
                         \<and> low_invariant_is_0_Env s"
 
 definition inc_lowbound_inv2 :: "env \<Rightarrow> bool" where
-"inc_lowbound_inv2 s \<equiv> loop_update_action_pre s
-                        \<and> (xs s)!(i s) < 1
+"inc_lowbound_inv2 s \<equiv> dnfp_precondition s
                         \<and> invariant_low_to_j_is_1_Env s"
 
 definition inc_lowbound_inv3 :: "env \<Rightarrow> bool" where
-"inc_lowbound_inv3 s \<equiv> loop_update_action_pre s
-                        \<and> (xs s)!(i s) < 1
+"inc_lowbound_inv3 s \<equiv> dnfp_precondition s
                         \<and> high_invariant_is_2_Env s"
 
 definition dec_highbound_pre where 
@@ -213,18 +194,15 @@ definition dec_highbound_pre where
                         \<and> (xs e)!(i e) > 1"
 
 definition dec_highbound_inv1 where 
-"dec_highbound_inv1 e \<equiv> loop_update_action_pre e 
-                        \<and> (xs e)!(i e) > 1
+"dec_highbound_inv1 e \<equiv> dnfp_precondition e 
                         \<and> low_invariant_is_0_Env e"
 
 definition dec_highbound_inv2 where 
-"dec_highbound_inv2 e \<equiv> loop_update_action_pre e 
-                        \<and> (xs e)!(i e) > 1
+"dec_highbound_inv2 e \<equiv> dnfp_precondition e 
                         \<and> invariant_low_to_j_is_1_Env e"
 
 definition dec_highbound_inv3 where 
-"dec_highbound_inv3 e \<equiv> loop_update_action_pre e 
-                        \<and> (xs e)!(i e) > 1
+"dec_highbound_inv3 e \<equiv> dnfp_precondition e 
                         \<and> high_invariant_is_2_Env e"
 
 definition inc_index_pre:: "env \<Rightarrow> env \<Rightarrow> bool" where 
@@ -234,20 +212,15 @@ definition inc_index_pre:: "env \<Rightarrow> env \<Rightarrow> bool" where
                       \<and> \<not>(xs e)!(i e) < 1"
 
 definition inc_index_inv1:: "env \<Rightarrow> bool" where 
-"inc_index_inv1 e \<equiv> loop_update_action_pre e
-                      \<and> \<not>(xs e)!(i e) > 1
-                      \<and> \<not>(xs e)!(i e) < 1
+"inc_index_inv1 e \<equiv> dnfp_precondition e
                       \<and> low_invariant_is_0_Env e"
 
 definition inc_index_inv2:: "env \<Rightarrow> bool" where 
-"inc_index_inv2 e \<equiv> loop_update_action_pre e
-                      \<and> \<not>(xs e)!(i e) > 1
-                      \<and> \<not>(xs e)!(i e) < 1
+"inc_index_inv2 e \<equiv> dnfp_precondition e
                       \<and> invariant_low_to_j_is_1_Env e"
 
 definition inc_index_inv3:: "env \<Rightarrow> bool" where
-"inc_index_inv3 e \<equiv> loop_update_action_pre e
-                    \<and> (xs e)!(i e) = 1
+"inc_index_inv3 e \<equiv> dnfp_precondition e
                     \<and> high_invariant_is_2_Env e"
 
 subsubsection\<open>Post-conditions\<close>
@@ -258,8 +231,8 @@ definition inc_lowbound_post:: "env \<Rightarrow> env \<Rightarrow> bool" where
                           \<and> i e < i e'"
 
 definition dec_highbound_post where 
-"dec_highbound_post e e' \<equiv> length (xs e) > high e' 
-                              \<and> high e < high e' 
+"dec_highbound_post e e' \<equiv> length (xs e') > high e' 
+                              \<and> high e > high e' 
                               \<and> low e = low e'
                               \<and> i e = i e'
                               \<and> (xs e')!(high e') = 2
