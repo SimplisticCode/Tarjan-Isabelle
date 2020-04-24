@@ -168,7 +168,8 @@ definition dnfp_post where
 (*This needs to change a little bit*)
 
 definition loop_update_action_post where
-"loop_update_action_post e e' \<equiv> dnfp_post e e'"
+"loop_update_action_post e e' \<equiv> dnfp_post e e'
+                                \<and> high e - i e = Suc(high e' - i e')"
 
 definition inc_lowbound_pre:: "env \<Rightarrow> env \<Rightarrow> bool" where 
 "inc_lowbound_pre e s \<equiv> s = e

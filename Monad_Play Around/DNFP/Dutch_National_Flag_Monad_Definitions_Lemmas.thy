@@ -130,12 +130,22 @@ lemma inc_lowbound_spec: "spec (inc_lowbound_pre e) inc_lowbound (GG (inc_lowbou
    apply(intro allI; simp)
    apply(intro get_rule; intro allI)
    apply(simp add: spec_def put_def get_state_def put_state_def low_Env_def)
-   apply (intro seq_rule[of _ _ "(\<lambda>x y. i e = i y)"])
-   apply (simp add: spec_def put_def put_state_def swap_def get_state_def xs_Env_def i_Env_def)
+   apply (intro seq_rule[of _ _ "(\<lambda>x y. high y - i y = high e - i e \<and> high e > i e)"])
+    apply (simp add: spec_def put_def put_state_def swap_def get_state_def xs_Env_def)
    apply(intro allI; simp)
    apply(intro get_rule; intro allI)
-   apply (intro seq_rule[of _ _ "(\<lambda>x y. i e < i y)"])
-   apply (simp add: spec_def put_def put_state_def swap_def get_state_def i_Env_def)
+   apply (intro seq_rule[of _ _ "(\<lambda>x y. Suc(high y - i y) = high e - i e)"])
+    apply (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
+  apply linarith
+   apply(intro allI; simp)
+   apply(intro get_rule; intro allI)
+   apply(simp add: spec_def put_def get_state_def put_state_def low_Env_def)
+   apply (intro seq_rule[of _ _ "(\<lambda>x y. i y \<ge> i e)"])
+    apply (simp add: spec_def put_def put_state_def swap_def get_state_def xs_Env_def)
+   apply(intro allI; simp)
+   apply(intro get_rule; intro allI)
+   apply (intro seq_rule[of _ _ "(\<lambda>x y. i y > i e)"])
+    apply (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
    apply(intro allI; simp)
    apply(intro get_rule; intro allI)
   by(simp add: spec_def put_def get_state_def put_state_def low_Env_def)
@@ -294,7 +304,13 @@ lemma dec_highbound_spec: "spec (dec_highbound_pre e) dec_highbound (GG (dec_hig
      apply(intro allI; simp)
      apply(intro get_rule; intro allI; simp)
       apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def)
-        by (simp add: Dutch_National_Flag_Monad_Definitions.mset_swap)
+         apply (simp add: Dutch_National_Flag_Monad_Definitions.mset_swap)
+   apply (intro seq_rule[of _ _ "(\<lambda>x y. Suc(high y - i y) = high e - i e \<and> high e > i e)"])
+         apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def)
+        apply linarith
+   apply(intro allI; simp)
+   apply(intro get_rule; intro allI; simp)
+        by (simp add: spec_def put_def put_state_def get_state_def xs_Env_def)
   
 
 definition dec_highbound_inv1_aux:: "env \<Rightarrow> bool" where
@@ -366,6 +382,7 @@ lemma inc_index_spec: "spec (inc_index_pre e) inc_index (GG (inc_index_post e))"
   apply(intro get_rule; intro allI;simp)
   apply(intro conj_rule_right)
   apply (simp_all add: spec_def put_def put_state_def get_state_def i_Env_def)
+   apply linarith
   by linarith
 
 subsubsection\<open>Invariants\<close>
@@ -473,6 +490,17 @@ lemma loop_update_action_spec: "spec (loop_update_action_pre_aux e) loop_update_
    apply(intro allI; simp)
     apply(intro get_rule; intro allI)
      apply (simp add: spec_def put_def put_state_def  get_state_def low_Env_def)
+   apply (intro seq_rule[of _ _ "(\<lambda>x y. high y - i y = high e - i e \<and> high e > i e)"])
+    apply (simp add: spec_def put_def put_state_def swap_def get_state_def xs_Env_def)
+   apply(intro allI; simp)
+   apply(intro get_rule; intro allI)
+   apply (intro seq_rule[of _ _ "(\<lambda>x y. Suc(high y - i y) = high e - i e)"])
+    apply (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
+     apply linarith
+   apply(intro allI; simp)
+   apply(intro get_rule; intro allI)
+    apply (simp add: spec_def put_def put_state_def get_state_def low_Env_def)
+
     apply(simp add: dec_highbound_def)
     apply(intro conj_rule_right)
         apply (intro get_rule; intro allI; simp)
@@ -500,7 +528,7 @@ lemma loop_update_action_spec: "spec (loop_update_action_pre_aux e) loop_update_
        apply (simp add: spec_def get_def put_def get_state_def put_state_def xs_Env_def swap_def)
       apply (intro get_rule; intro allI; simp)
       apply(intro seq_rule[of _ _ "(\<lambda>x y. high y - i y < high e - i e)"]) 
-     apply (simp add: spec_def get_def put_def get_state_def put_state_def high_Env_def)
+      apply (simp add: spec_def get_def put_def get_state_def put_state_def high_Env_def)
   apply(linarith)
      apply(intro allI; simp)
     apply (intro get_rule; intro allI; simp)
@@ -511,11 +539,20 @@ lemma loop_update_action_spec: "spec (loop_update_action_pre_aux e) loop_update_
    apply(intro allI; simp)
     apply(intro get_rule; intro allI; simp)
     apply (simp add: spec_def get_def put_def get_state_def put_state_def xs_Env_def swap_def)
-  apply (simp add: Multiset.mset_swap)
+    apply (simp add: Multiset.mset_swap)
+    apply(intro get_rule; intro allI; simp)
+
+   apply (intro seq_rule[of _ _ "(\<lambda>x y. Suc(high y - i y) = high e - i e \<and> high e > i e)"])
+         apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def)
+        apply linarith
+   apply(intro allI; simp)
+   apply(intro get_rule; intro allI; simp)
+  apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def)
    apply(simp add: inc_index_def)
     apply (intro get_rule; intro allI; simp)
     apply (simp add: spec_def get_def put_def get_state_def put_state_def i_Env_def)
-  by (simp add: diff_le_mono2)
+  apply (simp add: diff_le_mono2)
+  by (simp add: Suc_diff_Suc)
 
 subsubsection\<open>Invariants - Loop_update_action \<close>
 
@@ -564,71 +601,23 @@ lemma loop_update_action_invariantRed: "spec loop_update_action_inv1_aux loop_up
    by (simp add: spec_def get_def put_def get_state_def put_state_def i_Env_def)
 
 lemma loop_update_action_invariantWhite: "spec loop_update_action_inv2_aux loop_update_action (GG loop_update_action_inv2)"
-   unfolding loop_update_action_inv2_aux_def dnfp_precondition_def loop_update_action_inv2_def loop_update_action_pre_def  GG_def invariant_low_to_j_is_1_Env_def
+   unfolding loop_update_action_inv2_aux_def GG_def
   apply(simp add: loop_update_action_def)
   apply (intro get_rule; intro allI; clarify)
-   apply (intro cond_rule)
-     apply(simp add: inc_lowbound_def)
-     apply (intro get_rule; intro allI; simp)
-   apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def swap_def get_def i_Env_def low_Env_def return_def)
-   apply(intro allI)
-     apply (simp add: nth_list_update)
-     apply(simp add: dec_highbound_def)
-        apply(intro get_rule; intro allI; simp)
-    apply(intro seq_rule[of _ _ "(\<lambda>x e. i e \<le> high e \<and>
-               low e \<le> i e \<and>
-               high e \<le> length (xs e) \<and>
-               set (xs e) \<subseteq> {0, 1, 2} \<and> (\<forall>x. low e \<le> x \<and> x < i e \<longrightarrow> xs e ! x = Suc 0))"])
-     apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def swap_def)
-    apply linarith
-     apply(intro allI; simp)
-    apply(intro get_rule;intro allI; simp)
-   apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def swap_def)
-   apply(simp add: inc_index_def)
-   apply(intro get_rule;intro allI; simp)
-   apply (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
-   apply(intro allI)
-   using nat_neq_iff by fastforce
+   apply (intro cond_rule; simp)
+    apply (smt GG_def case_prodD case_prodI2 inc_lowbound_inv2_aux_def inc_lowbound_inv2_def inc_lowbound_invariantWhite less_numeral_extra(1) loop_update_action_inv2_def spec_def)
+    apply (smt GG_def One_nat_def dec_highbound_inv2_aux_def dec_highbound_inv2_def dec_highbound_invariantWhite loop_update_action_inv2_def spec_def split_beta')
+   by (smt GG_def One_nat_def Suc_less_eq inc_index_inv2_aux_def inc_index_inv2_def inc_index_invariantWhite less_Suc_eq loop_update_action_inv2_def spec_def split_beta')
+   
 
 lemma loop_update_action_invariantBlue: "spec loop_update_action_inv3_aux loop_update_action (GG loop_update_action_inv3)"
-   unfolding loop_update_action_inv3_aux_def dnfp_precondition_def  loop_update_action_inv3_def loop_update_action_pre_def  GG_def high_invariant_is_2_Env_def
+   unfolding loop_update_action_inv3_aux_def GG_def 
   apply(simp add: loop_update_action_def)
   apply (intro get_rule; intro allI; clarify)
-   apply (intro cond_rule)
-     apply(simp add: inc_lowbound_def) 
-     apply(intro get_rule;intro allI; simp)
-  apply(intro seq_rule[of _ _ "(\<lambda>x e. i e < high e \<and>
-                               low e \<le> i e \<and>
-                               high e \<le> length (xs e) \<and>
-                               set (xs e) \<subseteq> {0, 1, 2} \<and>
-                               (\<forall>x. high e \<le> x \<and> x < length (xs e) \<longrightarrow> xs e ! x = 2))"])
-   apply (simp add: spec_def put_def put_state_def swap_def get_state_def xs_Env_def)
-      apply(intro allI; simp)
-  apply(intro get_rule; intro allI)
-  apply(intro seq_rule[of _ _ "(\<lambda>x e. i e \<le> high e \<and>
-               low e < i e \<and>
-               high e \<le> length (xs e) \<and>
-               set (xs e) \<subseteq> {0, 1, 2} \<and>
-               (\<forall>x. high e \<le> x \<and> x < length (xs e) \<longrightarrow> xs e ! x = 2))"])
-   apply (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
-  apply(intro allI; simp)
-  apply(intro get_rule; intro allI)
-     apply (simp add: spec_def put_def put_state_def get_state_def low_Env_def)
-    apply(simp_all add: dec_highbound_def)
-    apply(intro get_rule; intro allI; simp)
-   apply(intro seq_rule[of _ _ "(\<lambda>x e. i e \<le> high e \<and>
-                 low e \<le> i e \<and>
-                 high e \<le> length (xs e) \<and>
-                 set (xs e) \<subseteq> {0, 1, 2} \<and> Suc 0 < xs e ! i e \<and> (\<forall>x. high e < x \<and> x < length (xs e) \<longrightarrow> xs e ! x = 2))"])
-     apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def swap_def)
-     apply force
-     apply(intro allI; simp)
-    apply(intro get_rule;intro allI; simp)
-    apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def swap_def)
-   apply (smt One_nat_def leD le_eq_less_or_eq le_less_trans length_list_update less_numeral_extra(2) nth_list_update value_must_be_two_aux)
-    apply(simp add: inc_index_def)
-    apply(intro get_rule; intro allI; simp)
-   by (simp add: spec_def put_def put_state_def get_state_def i_Env_def)
+   apply (intro cond_rule;simp)
+     apply (smt GG_def case_prodD case_prodI2 inc_lowbound_inv3_aux_def inc_lowbound_inv3_def inc_lowbound_invariantBlue less_numeral_extra(1) loop_update_action_inv3_def spec_def)
+    apply (smt GG_def One_nat_def dec_highbound_inv3_aux_def dec_highbound_inv3_def dec_highbound_invariantBlue loop_update_action_inv3_def spec_def split_beta')
+   by (smt GG_def One_nat_def Suc_less_eq inc_index_inv3_aux_def inc_index_inv3_def inc_index_invariantBlue less_Suc_eq loop_update_action_inv3_def spec_def split_beta')
 
 definition loop_update_action_inv :: "env \<Rightarrow> bool" where
 "loop_update_action_inv s \<equiv> (loop_update_action_inv3 s \<and> loop_update_action_inv2 s \<and> loop_update_action_inv1 s)"

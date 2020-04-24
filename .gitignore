@@ -6,3 +6,5 @@ example/rewrite_example.sml
 .DS_Store
 *.thy~
 *.zip
+.DS_Store
+Monad_Play Around/.DS_Store
