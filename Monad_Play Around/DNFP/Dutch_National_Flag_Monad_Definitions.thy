@@ -85,11 +85,6 @@ definition invariant_low_to_j_is_1_Env where
 definition high_invariant_is_2_Env where
 "high_invariant_is_2_Env e\<equiv> (\<forall>x. x \<ge> (high e) \<and> x < length (xs e) \<longrightarrow> (xs e)!x = 2)"
 
-definition invariants_Env:: "env \<Rightarrow> bool" where
-"invariants_Env e \<equiv> high_invariant_is_2_Env e
-              \<and> invariant_low_to_j_is_1_Env e
-              \<and> low_invariant_is_0_Env e"
-
 section\<open>General DNFP conditions\<close>
 text\<open>This relationship between the variables should always hold\<close>
 definition dnfp_variables_invariants:: "env \<Rightarrow> bool" where
