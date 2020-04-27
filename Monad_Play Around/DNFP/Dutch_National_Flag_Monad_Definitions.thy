@@ -19,6 +19,7 @@ definition low_Env:: "env \<Rightarrow> nat \<Rightarrow> env" where "low_Env s 
 definition i_Env:: "env \<Rightarrow> nat \<Rightarrow> env" where "i_Env s v = s \<lparr> i := v \<rparr>"
 definition xs_Env:: "env \<Rightarrow> nat array  \<Rightarrow> env" where "xs_Env s v = s \<lparr> xs := v \<rparr>"
 
+subsection\<open>Theorems about the update functions\<close>
 theorem put_high_rule: "spec (\<lambda>x. p () (x \<lparr> high := v \<rparr>)) (put high_Env v) p"
   by (simp add: spec_def put_def get_state_def put_state_def high_Env_def)
 
@@ -31,10 +32,11 @@ theorem put_i_rule: "spec (\<lambda>x. p () (x \<lparr> i := v \<rparr>)) (put i
 theorem put_xs_rule: "spec (\<lambda>x. p () (x \<lparr> xs := v \<rparr>)) (put xs_Env v) p"
   by (simp add: spec_def put_def get_state_def put_state_def xs_Env_def)
 
+section\<open>DNFP function definitions\<close>
+
 definition swap:: "'a array \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 'a array" where
 "swap l x y \<equiv> (if x < length l \<and> y < length l then l[x := l!y, y := l!x] else l)"
 
-section\<open>DNFP function definitions\<close>
 definition inc_lowbound where
 "inc_lowbound \<equiv> do{
                   (l, s, j) \<leftarrow> get (\<lambda>e. (low e, xs e, i e));  
@@ -278,7 +280,6 @@ subsubsection\<open>Inc index invariants\<close>
 definition inc_index_inv1:: "env \<Rightarrow> bool" where 
 "inc_index_inv1 e \<equiv> dnfp_variables_invariants e
                       \<and> low_invariant_is_0_Env e"
-
 
 definition inc_index_inv2:: "env \<Rightarrow> bool" where 
 "inc_index_inv2 e \<equiv> dnfp_variables_invariants e

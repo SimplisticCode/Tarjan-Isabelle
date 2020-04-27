@@ -1,0 +1,12 @@
+(* build the session using "isabelle build -D ." *)
+session DNFP = HOL +
+  options [document = pdf, document_output = "output", 						document_variants="document:outline=/proof"]
+  sessions
+    "HOL-Library"
+    "HOL-Eisbach"
+  theories [document = false]
+    "../State_Monad_HL"
+  theories
+    Dutch_National_Flag_Monad
+  document_files
+    "root.tex"
