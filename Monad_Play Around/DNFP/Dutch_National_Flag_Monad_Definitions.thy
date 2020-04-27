@@ -126,6 +126,18 @@ definition dnfp_mon_spec where
 "dnfp_mon_spec e \<equiv> dnfp_variables_invariants e
                     \<and> dnfp_mon_inv e"
 
+definition dnfp_mon_pre::"nat \<Rightarrow> env \<Rightarrow> bool"  where
+"dnfp_mon_pre n e \<equiv> dnfp_variables_invariants e \<and> n = high e - i e"
+
+definition i_high_equal::"nat \<Rightarrow> env \<Rightarrow> bool"  where
+ "i_high_equal n e \<equiv> high e = i e"
+
+definition dnfp_mon_spec_aux:: "nat \<Rightarrow> env \<Rightarrow> bool" where
+"dnfp_mon_spec_aux n e \<equiv> n = high e - i e \<and> dnfp_mon_spec e"
+
+definition array_sorted where
+"array_sorted e \<equiv> sorted(xs e)"
+
 subsection\<open>Loop update action definitions\<close>
 text\<open>These definitions rely on the definitions on dnfp, but in the precondition they have an extra assumption that gets inferred from the conditions-statement inside the function\<close>
 text\<open>The post-condition is also for each of the definitions a little stronger compared to the more general\<close>

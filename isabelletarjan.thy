@@ -28,13 +28,15 @@ record 'v env =
   sn    :: nat
   num   :: "'v \<Rightarrow> int"
 
-subsection\<open>update functions\<close>
+subsection\<open>Update functions\<close>
 definition black_Env:: "'v env \<Rightarrow> 'v set \<Rightarrow> 'v env" where "black_Env s v = s \<lparr> black := v \<rparr>"
 definition gray_Env:: "'v env \<Rightarrow> 'v set \<Rightarrow> 'v env" where "gray_Env s v = s \<lparr> gray := v \<rparr>"
 definition stack_Env:: "'v env \<Rightarrow> 'v list \<Rightarrow> 'v env" where "stack_Env s v = s \<lparr> stack := v \<rparr>"
 definition sccs_Env:: "'v env \<Rightarrow> 'v set set \<Rightarrow> 'v env" where "sccs_Env s v = s \<lparr> sccs := v \<rparr>"
 definition sn_Env:: "'v env \<Rightarrow> nat \<Rightarrow> 'v env" where "sn_Env s v = s \<lparr> sn := v \<rparr>"
 definition num_Env:: "'v env \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> 'v env" where "num_Env s v = s \<lparr> num := v \<rparr>"
+
+subsubsection\<open>Theorems - Update functions\<close>
 
 theorem put_black_rule: "spec (\<lambda>x. p () (x \<lparr> black := v \<rparr>)) (put black_Env v) p"
   by (simp add: spec_def put_def get_state_def put_state_def black_Env_def)
@@ -53,6 +55,7 @@ theorem put_sn_rule: "spec (\<lambda>x. p () (x \<lparr> sn := v \<rparr>)) (put
 
 theorem put_num_rule: "spec (\<lambda>x. p () (x \<lparr> num := v \<rparr>)) (put num_Env v) p"
   by (simp add: spec_def put_def get_state_def put_state_def num_Env_def)
+
 
 definition colored where
   "colored e \<equiv> black e \<union> gray e"
@@ -184,12 +187,12 @@ lemma fst_split_list:
   shows "\<exists>ys. fst (split_list x xs) = ys @ [x] \<and> x \<notin> set ys"
   using assms by (induct xs) (auto simp: split_def)
 
+section\<open>Tarjan function definitions\<close>
 text \<open>
   Push a vertex on the stack and increment the sequence number.
   The pushed vertex is associated with the (old) sequence number.
   It is also added to the set of gray nodes.
 \<close>
-
 
 definition insert_black:: "'v \<Rightarrow> ('v env, unit) state" where
 "insert_black x \<equiv> do{
@@ -200,24 +203,23 @@ definition insert_black:: "'v \<Rightarrow> ('v env, unit) state" where
 subsubsection\<open>Insert black spec - lemmas:\<close>
 definition insert_black_pre:: "'v env \<Rightarrow> 'v \<Rightarrow> 'v env \<Rightarrow> bool " where
 "insert_black_pre e x s \<equiv> s = e
-                          \<and> x \<notin> (black e)"
+                          \<and> x \<notin> (black e)
+                          \<and> \<not>infinite (black e)"
 
-definition insert_black_post:: "'v env \<Rightarrow> 'v \<Rightarrow>  'v env \<Rightarrow> bool " where
+definition insert_black_post:: "'v env \<Rightarrow> 'v \<Rightarrow> 'v env \<Rightarrow> bool " where
 "insert_black_post e x e2 \<equiv> x \<notin> (black e)
                             \<and> x \<in> black e2
                             \<and> sccs e = sccs e2
                             \<and> sn e = sn e2
                             \<and> gray e = gray e2
                             \<and> num e = num e2
-                            \<and> card (black e) \<le> card (black e2)"
+                            \<and> card (black e) < card (black e2)"
 
 lemma black_inc: "spec (insert_black_pre e x) (insert_black x) (GG (insert_black_post e x))"
   unfolding insert_black_pre_def GG_def insert_black_post_def
   apply(simp add: insert_black_def)
   apply(intro get_rule; intro allI; simp)
-  apply(simp add: spec_def put_def get_state_def put_state_def black_Env_def)
-  by (metis card_infinite card_insert_le card_mono eq_iff subset_insertI)
-
+  by(simp add: spec_def put_def get_state_def put_state_def black_Env_def)
 
 definition insert_sccs where
 "insert_sccs x \<equiv> do{
@@ -238,7 +240,8 @@ subsubsection\<open>Insert black spec - lemmas:\<close>
 definition insert_gray_pre:: "'v env \<Rightarrow> 'v \<Rightarrow> 'v env \<Rightarrow> bool " where
 "insert_gray_pre e x s \<equiv> s = e
                           \<and> x \<notin> (gray e)
-                          \<and> x \<in> vertices"
+                          \<and> x \<in> vertices
+                          \<and> \<not>infinite (gray e)"
 
 definition insert_gray_post:: "'v env \<Rightarrow> 'v \<Rightarrow>  'v env \<Rightarrow> bool " where
 "insert_gray_post e x e2 \<equiv>  x \<in> vertices
@@ -248,21 +251,37 @@ definition insert_gray_post:: "'v env \<Rightarrow> 'v \<Rightarrow>  'v env \<R
                             \<and> sn e = sn e2
                             \<and> black e = black e2
                             \<and> num e = num e2
-                            \<and> (card (gray e)) \<le> card (gray e2)"
+                            \<and> (card (gray e)) < card (gray e2)"
 
 lemma gray_inc: "spec (insert_gray_pre e x) (insert_gray x) (GG (insert_gray_post e x))"
   unfolding insert_gray_pre_def GG_def insert_gray_post_def
   apply(simp add: insert_gray_def)
   apply(intro get_rule; intro allI; simp)
-  apply(simp add: spec_def put_def get_state_def put_state_def gray_Env_def)
-  by (metis card_infinite card_insert_le card_mono eq_iff subset_insertI)
-
+  by(simp add: spec_def put_def get_state_def put_state_def gray_Env_def)
 
 definition insert_stack:: "'v  \<Rightarrow> ('v env, unit) state" where
 "insert_stack x \<equiv> do {
        st \<leftarrow> get stack;
        put stack_Env (x # st)
     }"
+
+definition insert_stack_pre:: "'v env \<Rightarrow> 'v \<Rightarrow> 'v env \<Rightarrow> bool " where
+"insert_stack_pre e x s \<equiv> s = e
+                          \<and> x \<notin> set(stack e)
+                          \<and> x \<in> vertices
+                          \<and> \<not>infinite (set(stack e))"
+
+definition insert_stack_post:: "'v env \<Rightarrow> 'v \<Rightarrow> 'v env \<Rightarrow> bool " where
+"insert_stack_post e x e2 \<equiv> 
+                           x \<in> set(stack e2)
+                          \<and> x \<in> vertices
+                          \<and> size (stack e) < size (stack e2)"
+
+lemma insert_stack_inc: "spec (insert_stack_pre e x) (insert_stack x) (GG (insert_stack_post e x))"
+  unfolding insert_stack_pre_def GG_def insert_stack_post_def
+  apply(simp add: insert_stack_def)
+  apply(intro get_rule; intro allI; simp)
+  by(simp add: spec_def put_def get_state_def put_state_def stack_Env_def)
 
 definition count_up_sn:: "('v env, unit) state" where
 "count_up_sn \<equiv> do {
@@ -273,7 +292,7 @@ definition count_up_sn:: "('v env, unit) state" where
 subsubsection\<open>count_up_sn lemma\<close>
 definition count_up_pre:: "'v env \<Rightarrow> 'v env \<Rightarrow> bool" where
 "count_up_pre e s \<equiv> e = s \<and>
-                    sn e \<le> (card vertices)"
+                    sn e < (card vertices)"
 
 definition count_up_post:: "'v env \<Rightarrow> 'v env \<Rightarrow> bool" where
 "count_up_post e e2 \<equiv> sn e < sn e2"
@@ -313,26 +332,24 @@ definition add_stack_incr:: "'v \<Rightarrow> ('v env, unit) state" where
 
 subsubsection\<open>Add_stack_incr lemmas\<close>
 definition add_stack_incr_pre:: "'v \<Rightarrow> 'v env \<Rightarrow> 'v env \<Rightarrow> bool" where
-"add_stack_incr_pre x e s \<equiv> e = s
-                          \<and> x \<in> vertices
-                          \<and> x \<notin> black e
-                          \<and> x \<notin> set(stack e)
-                          \<and> (num e) x = -1"
+"add_stack_incr_pre x e s \<equiv>
+                          insert_gray_pre e x s
+                          \<and> insert_stack_pre e x s
+                          \<and> update_num_pre x e
+                          \<and> update_num_pre x e "
 
 definition add_stack_incr_post:: "'v \<Rightarrow> 'v env \<Rightarrow> 'v env \<Rightarrow> bool" where
 "add_stack_incr_post x e e2 \<equiv> 
-                          x \<in> gray e2
-                          \<and> x \<in> vertices
-                          \<and> x \<in> set(stack e2)
-                          \<and> (num e2) x \<noteq> -1
-                          \<and> sn e < sn e2
-                          \<and> card (gray e) \<le> card(gray e2)"
+                           insert_stack_post e x e2
+                          \<and> insert_gray_post e x e2
+                          \<and> update_num_post x e2"
 
 lemma add_stack_incr_spec: "spec (add_stack_incr_pre x e) (add_stack_incr x) (GG (add_stack_incr_post x e))"
   unfolding add_stack_incr_pre_def GG_def add_stack_incr_post_def
   apply(simp add:add_stack_incr_def)
+  apply(intro conj_rule_right)
   apply(simp add: insert_gray_def)
-  apply(intro get_rule; intro allI; simp)
+      apply(intro get_rule; intro allI; simp)
   apply(intro conj_rule_right)
   apply (intro seq_rule[of _ _ "(\<lambda>xa y. x \<in> gray y)"])
        apply(simp add: spec_def gray_Env_def put_def get_def get_state_def put_state_def)
@@ -404,10 +421,9 @@ lemma add_stack_incr_spec: "spec (add_stack_incr_pre x e) (add_stack_incr x) (GG
      apply(simp add: update_num_def)
      apply(intro get_rule; intro allI; simp)
      apply(simp add: spec_def num_Env_def put_def get_def get_state_def put_state_def)
-     apply (intro seq_rule[of _ _ "(\<lambda>xa y. card (gray e) \<le> card (gray y))"])
+     apply (intro seq_rule[of _ _ "(\<lambda>xa y. card (gray e) < card (gray y))"])
     apply(simp add: spec_def gray_Env_def put_def get_def get_state_def put_state_def)
-  apply (metis card_infinite card_insert_le zero_le)
-  apply(intro allI; simp)
+    apply(intro allI; simp)
      apply(simp add: insert_stack_def)
    apply(intro get_rule; intro allI)
      apply (intro seq_rule[of _ _ "(\<lambda>xa y. card (gray e) \<le> card (gray y))"])

@@ -1,12 +1,13 @@
 theory Dutch_National_Flag_Monad
 imports 
   "Dutch_National_Flag_Monad_Definitions_Lemmas"
+  "HOL-Library.LaTeXsugar"
 begin
 
 section\<open>DNFP\<close>
 text\<open>A version using a state monad for storing the array and the intermediate variable.
 This function takes a parameter that defines the size of the unsorted array (the difference between high and i).
-This makes the recursion well-defined and will ensure termination since loop_update_action decreases the difference for every single call\<close>
+This makes the recursion well-defined and will ensure termination since loop-update-action decreases the difference for every single call\<close>
 fun dnfp_mon:: "nat \<Rightarrow> (env, unit) state" where
   case0:"dnfp_mon 0  = skip"|
   caseN:"dnfp_mon (Suc n) = do {
@@ -145,14 +146,9 @@ lemma aux1: "(spec (\<lambda>e. dnfp_variables_invariants e \<and> n = high e - 
   by blast
 
 subsection\<open>Main proofs\<close>
-definition dnfp_mon_pre::"nat \<Rightarrow> env \<Rightarrow> bool"  where
-"dnfp_mon_pre n e \<equiv> dnfp_variables_invariants e \<and> n = high e - i e"
-
-definition i_high_equal::"nat \<Rightarrow> env \<Rightarrow> bool"  where
- "i_high_equal n e \<equiv> high e = i e"
 
 text\<open>If dnfp is called with a proper environment and n is the difference between high and i. When High and I will be equal after the termination of the function.
-This can be used the termination. And this proof can together with the dnfp_mon_main-proof be used to proof that the array will be sorted by the dnfp-function\<close>
+This can be used the termination. And this proof can together with the dnfp-mon main-proof be used to proof that the array will be sorted by the dnfp-function\<close>
 lemma dnfp_mon_termination: "spec (dnfp_mon_pre n) (dnfp_mon n) (GG (i_high_equal n))"
   unfolding GG_def dnfp_mon_pre_def dnfp_mon_spec_def i_high_equal_def
   apply(induction n rule: dnfp_mon.induct)
@@ -165,12 +161,7 @@ lemma dnfp_mon_termination: "spec (dnfp_mon_pre n) (dnfp_mon n) (GG (i_high_equa
   using aux1 apply blast
   by(simp add: spec_def skip_def dnfp_variables_invariants_def)
 
-definition dnfp_mon_spec_aux:: "nat \<Rightarrow> env \<Rightarrow> bool" where
-"dnfp_mon_spec_aux n e \<equiv> n = high e - i e \<and> dnfp_mon_spec e"
-
-definition array_sorted where
-"array_sorted e \<equiv> sorted(xs e)"
-
+text\<open>The array will be sorted after the termination of the dnfp function\<close>
 lemma dnfp_mon_main_list_sorted: "spec (dnfp_mon_spec_aux n) (dnfp_mon n) (GG array_sorted)"
   unfolding GG_def dnfp_mon_spec_aux_def array_sorted_def
   apply(induction n rule: dnfp_mon.induct)
