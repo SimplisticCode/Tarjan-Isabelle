@@ -3,7 +3,7 @@ imports
   "Dutch_National_Flag_Monad_Eisbach"
 begin
 
-section\<open>Auxilarry lemmas\<close>
+section\<open>Aux lemmas about values inside the array\<close>
 
 lemma value_must_be_one : "\<lbrakk>xs e ! i e  \<noteq> 0 ; xs e! i e \<noteq> 2 ; i e < length (xs e) ; set(xs e) \<subseteq> {0,1,2}\<rbrakk> \<Longrightarrow> xs e ! i e = 1"
   by (smt insertE insert_subset mk_disjoint_insert nth_mem singletonD)
@@ -20,7 +20,7 @@ lemma value_must_be_two : "\<lbrakk>xs e ! i e  > 0 ; xs e! i e > 1 ; i e < leng
 lemma value_must_be_one_aux : "\<lbrakk>\<not>xs e ! i e  > 1 ; \<not>xs e! i e < 1 ; i e < length (xs e) ; set(xs e) \<subseteq> {0,1,2}\<rbrakk> \<Longrightarrow> xs e ! i e = 1"
   by linarith
 
-section\<open>Proof Inc_lowbound\<close>
+section\<open>Inc_lowbound - proof\<close>
 
 text\<open>Inc lowbound will keep relationship between variables and inc i and low\<close>
 lemma inc_lowbound_spec: "spec (inc_lowbound_pre e) inc_lowbound (GG (inc_lowbound_post e))"
