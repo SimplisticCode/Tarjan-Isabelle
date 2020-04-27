@@ -1,6 +1,6 @@
 theory Dutch_National_Flag_Monad_Definitions_Lemmas
 imports 
-  "Dutch_National_Flag_Monad_Definitions"
+  "Dutch_National_Flag_Monad_Eisbach"
 begin
 
 section\<open>Auxilarry lemmas\<close>
@@ -43,42 +43,37 @@ lemma sorted_dnfp: "\<lbrakk>sorted_dnfp_pre e\<rbrakk> \<Longrightarrow> invari
 
 definition sorted_array :: "env \<Rightarrow> bool" where
   "sorted_array e \<equiv> invariants_Env e 
-                  \<and> set(xs e) = {0,1,2}
-                  \<and> low e \<le> i e
-                  \<and> i e = high e
-                  \<and> high e \<le> length (xs e)"
+                  \<and> dnfp_precondition e
+                  \<and> i e = high e"
 
 lemma sorted_aux: "\<lbrakk>sorted_array e\<rbrakk> \<Longrightarrow> sorted (xs e)"
   unfolding sorted_array_def invariants_Env_def high_invariant_is_2_Env_def invariant_low_to_j_is_1_Env_def low_invariant_is_0_Env_def
   by (smt Suc_1 Suc_leD less_le_trans nat_le_linear not_less not_one_le_zero sorted_iff_nth_mono)
   
-
 lemma inc_lowbound_spec: "spec (inc_lowbound_pre e) inc_lowbound (GG (inc_lowbound_post e))"
   unfolding inc_lowbound_pre_def loop_update_action_pre_def dnfp_precondition_def GG_def inc_lowbound_post_def loop_update_action_post_def dnfp_post_def
   apply(simp_all add: inc_lowbound_def)
   apply(intro get_rule; intro allI; simp)
   apply(intro conj_rule_right)
-         apply(intro seq_rule[of _ _ "(\<lambda>_ y. high e = high y)"])
-          apply (simp add: spec_def put_def put_state_def swap_def get_state_def xs_Env_def i_Env_def)
+           apply(intro seq_rule[of _ _ "(\<lambda>_ y. high e = high y)"])
+  apply(rewrite_env simps: swap_def xs_Env_def)
   apply(intro allI; simp)
          apply(intro get_rule; intro allI)
-         apply (intro seq_rule[of _ _ "(\<lambda>_ y. high e = high y)"])
-          apply (simp add: spec_def put_def put_state_def swap_def get_state_def i_Env_def)
-          apply (simp add: spec_def put_def get_def return_def put_state_def swap_def get_state_def low_Env_def)
-  apply (intro seq_rule[of _ _ "(\<lambda>_ y. low e = low y)"])
-          apply (simp add: spec_def put_def put_state_def swap_def get_state_def xs_Env_def i_Env_def)
-        apply(intro allI; simp)
-        apply(intro get_rule; intro allI)
+           apply (intro seq_rule[of _ _ "(\<lambda>_ y. high e = high y)"])
+  apply(rewrite_env simps: i_Env_def)
+  apply(rewrite_env simps: low_Env_def)
+          apply (intro seq_rule[of _ _ "(\<lambda>_ y. low e = low y)"])
+  apply(rewrite_env_all)
+  apply(all_Get_Seq)
         apply(intro seq_rule[of _ _ "(\<lambda>_ y. low e = low y)"])
           apply (simp add: spec_def put_def put_state_def swap_def get_state_def i_Env_def)
-        apply(intro allI; simp)
-        apply(intro get_rule; intro allI)
+          apply(all_Get_Seq)
+
         apply(simp add: spec_def put_def get_state_def put_state_def low_Env_def)
        apply (intro seq_rule[of _ _ "(\<lambda>_ y. length (xs e) = length (xs y))"])
         apply (simp add: spec_def put_def put_state_def swap_def get_state_def xs_Env_def i_Env_def)
-       apply(intro allI)
-  apply(intro get_rule; intro allI; simp)
-       apply (intro seq_rule[of _ _ "(\<lambda>_ y. length (xs e) = length (xs y))"])
+         apply(all_Get_Seq)
+         apply (intro seq_rule[of _ _ "(\<lambda>_ y. length (xs e) = length (xs y))"])
         apply (simp add: spec_def put_def put_state_def swap_def get_state_def i_Env_def)
        apply(intro allI; simp)
        apply(intro get_rule; intro allI)
@@ -151,9 +146,6 @@ lemma inc_lowbound_spec: "spec (inc_lowbound_pre e) inc_lowbound (GG (inc_lowbou
   by(simp add: spec_def put_def get_state_def put_state_def low_Env_def)
 
 subsubsection\<open>Invariants\<close>
-definition inc_lowbound_inv1_aux:: "env \<Rightarrow> bool" where
-"inc_lowbound_inv1_aux e \<equiv> inc_lowbound_inv1 e \<and> loop_update_action_pre e \<and> xs e ! i e < 1"
-
 lemma inc_lowbound_invariantRed: "spec inc_lowbound_inv1_aux inc_lowbound (GG inc_lowbound_inv1)"
   unfolding inc_lowbound_inv1_aux_def inc_lowbound_inv1_def loop_update_action_pre_def  GG_def low_invariant_is_0_Env_def dnfp_precondition_def
   apply(simp_all add: inc_lowbound_def)
@@ -176,9 +168,6 @@ lemma inc_lowbound_invariantRed: "spec inc_lowbound_inv1_aux inc_lowbound (GG in
   apply(intro allI; simp)
   apply(intro get_rule; intro allI)
   by (simp add: spec_def put_def put_state_def get_state_def low_Env_def)
-
-definition inc_lowbound_inv2_aux:: "env \<Rightarrow> bool" where
-"inc_lowbound_inv2_aux e \<equiv> inc_lowbound_inv2 e \<and> loop_update_action_pre e \<and> xs e ! i e < 1"
 
 lemma inc_lowbound_invariantWhite: "spec inc_lowbound_inv2_aux inc_lowbound (GG inc_lowbound_inv2)"
   unfolding inc_lowbound_inv2_aux_def inc_lowbound_inv2_def loop_update_action_pre_def  GG_def invariant_low_to_j_is_1_Env_def dnfp_precondition_def
@@ -203,8 +192,6 @@ lemma inc_lowbound_invariantWhite: "spec inc_lowbound_inv2_aux inc_lowbound (GG 
   apply(intro get_rule; intro allI)
   by (simp add: spec_def put_def put_state_def  get_state_def low_Env_def)
 
-definition inc_lowbound_inv3_aux:: "env \<Rightarrow> bool" where
-"inc_lowbound_inv3_aux e \<equiv> inc_lowbound_inv3 e \<and> loop_update_action_pre e \<and> xs e ! i e < 1"
 
 lemma inc_lowbound_invariantBlue: "spec inc_lowbound_inv3_aux  inc_lowbound (GG inc_lowbound_inv3)"
   unfolding inc_lowbound_inv3_aux_def inc_lowbound_inv3_def loop_update_action_pre_def  GG_def high_invariant_is_2_Env_def dnfp_precondition_def
@@ -229,12 +216,6 @@ lemma inc_lowbound_invariantBlue: "spec inc_lowbound_inv3_aux  inc_lowbound (GG 
   apply(intro allI; simp)
   apply(intro get_rule; intro allI)
   by (simp add: spec_def put_def put_state_def get_state_def low_Env_def)
-
-definition inc_lowbound_inv :: "env \<Rightarrow> bool" where
-"inc_lowbound_inv s \<equiv> (inc_lowbound_inv3 s \<and> inc_lowbound_inv2 s \<and> inc_lowbound_inv1 s)"
-
-definition inc_lowbound_inv_pre :: "env \<Rightarrow> bool" where
-"inc_lowbound_inv_pre s \<equiv> (inc_lowbound_inv s \<and> loop_update_action_pre s \<and> xs s ! i s < 1)"
 
 lemma inc_lowbound_invariants: "spec inc_lowbound_inv_pre  inc_lowbound (GG inc_lowbound_inv)"
   by (smt GG_def case_prodD case_prodI2 inc_lowbound_inv1_aux_def inc_lowbound_inv2_aux_def inc_lowbound_inv3_aux_def inc_lowbound_inv_def inc_lowbound_inv_pre_def inc_lowbound_invariantBlue inc_lowbound_invariantRed inc_lowbound_invariantWhite spec_def)
@@ -303,8 +284,8 @@ lemma dec_highbound_spec: "spec (dec_highbound_pre e) dec_highbound (GG (dec_hig
        apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def)
      apply(intro allI; simp)
      apply(intro get_rule; intro allI; simp)
-      apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def)
-         apply (simp add: Dutch_National_Flag_Monad_Definitions.mset_swap)
+         apply (simp add: spec_def put_def put_state_def get_state_def swap_def xs_Env_def)
+        apply (simp add: mset_swap)
    apply (intro seq_rule[of _ _ "(\<lambda>x y. Suc(high y - i y) = high e - i e \<and> high e > i e)"])
          apply (simp add: spec_def put_def put_state_def get_state_def high_Env_def)
         apply linarith
@@ -312,11 +293,7 @@ lemma dec_highbound_spec: "spec (dec_highbound_pre e) dec_highbound (GG (dec_hig
    apply(intro get_rule; intro allI; simp)
         by (simp add: spec_def put_def put_state_def get_state_def xs_Env_def)
   
-
-definition dec_highbound_inv1_aux:: "env \<Rightarrow> bool" where
-"dec_highbound_inv1_aux e \<equiv> dec_highbound_inv1 e \<and> loop_update_action_pre e \<and> xs e ! i e > 1"
-
-subsubsection\<open>Invariants\<close>
+subsubsection\<open>Invariants - dec highbound\<close>
 lemma dec_highbound_invariantRed: "spec dec_highbound_inv1_aux dec_highbound (GG dec_highbound_inv1)"
     unfolding dec_highbound_inv1_aux_def dec_highbound_inv1_def dnfp_precondition_def loop_update_action_pre_def GG_def low_invariant_is_0_Env_def
     apply(simp_all add: dec_highbound_def)
@@ -331,8 +308,6 @@ lemma dec_highbound_invariantRed: "spec dec_highbound_inv1_aux dec_highbound (GG
     apply(intro get_rule;intro allI; simp)
     by (simp add: spec_def put_def put_state_def get_state_def xs_Env_def swap_def)
 
-definition dec_highbound_inv2_aux:: "env \<Rightarrow> bool" where
-"dec_highbound_inv2_aux e \<equiv> dec_highbound_inv2 e \<and> loop_update_action_pre e \<and> xs e ! i e > 1"
 
 lemma dec_highbound_invariantWhite: "spec dec_highbound_inv2_aux dec_highbound (GG dec_highbound_inv2)"
     unfolding dec_highbound_inv2_aux_def dec_highbound_inv2_def dnfp_precondition_def loop_update_action_pre_def GG_def invariant_low_to_j_is_1_Env_def
@@ -347,9 +322,6 @@ lemma dec_highbound_invariantWhite: "spec dec_highbound_inv2_aux dec_highbound (
      apply(intro allI; simp)
     apply(intro get_rule;intro allI; simp)
     by (simp add: spec_def put_def put_state_def get_state_def xs_Env_def swap_def)
-
-definition dec_highbound_inv3_aux:: "env \<Rightarrow> bool" where
-"dec_highbound_inv3_aux e \<equiv> dec_highbound_inv3 e \<and> loop_update_action_pre e \<and> xs e ! i e > 1"
 
 lemma dec_highbound_invariantBlue: "spec dec_highbound_inv3_aux dec_highbound (GG dec_highbound_inv3)"
     unfolding dec_highbound_inv3_aux_def dec_highbound_inv3_def dnfp_precondition_def loop_update_action_pre_def GG_def high_invariant_is_2_Env_def
@@ -366,16 +338,10 @@ lemma dec_highbound_invariantBlue: "spec dec_highbound_inv3_aux dec_highbound (G
     apply (simp add: spec_def put_def put_state_def get_state_def xs_Env_def swap_def)
     by (smt One_nat_def leD le_eq_less_or_eq le_less_trans length_list_update less_numeral_extra(2) nth_list_update value_must_be_two_aux)
 
-definition dec_highbound_inv :: "env \<Rightarrow> bool" where
-"dec_highbound_inv s \<equiv> (dec_highbound_inv3 s \<and> dec_highbound_inv2 s \<and> dec_highbound_inv1 s)"
-
-definition dec_highbound_inv_aux :: "env \<Rightarrow> bool" where
-"dec_highbound_inv_aux s \<equiv> (dec_highbound_inv s \<and>  loop_update_action_pre s \<and> xs s ! i s > 1 )"
-
 lemma dec_highbound_invariants: "spec dec_highbound_inv_aux dec_highbound (GG dec_highbound_inv)"
   by (smt GG_def case_prodD case_prodI2 dec_highbound_inv1_aux_def dec_highbound_inv2_aux_def dec_highbound_inv3_aux_def dec_highbound_inv_aux_def dec_highbound_inv_def dec_highbound_invariantBlue dec_highbound_invariantRed dec_highbound_invariantWhite spec_def)
 
-subsection\<open>Inc_index Invariants\<close>
+subsection\<open>Inc_index Lemmas\<close>
 lemma inc_index_spec: "spec (inc_index_pre e) inc_index (GG (inc_index_post e))"
   unfolding inc_index_pre_def dnfp_precondition_def dnfp_post_def loop_update_action_pre_def GG_def inc_index_post_def loop_update_action_post_def
   apply(simp_all add: inc_index_def)
@@ -386,18 +352,12 @@ lemma inc_index_spec: "spec (inc_index_pre e) inc_index (GG (inc_index_post e))"
   by linarith
 
 subsubsection\<open>Invariants\<close>
-definition inc_index_inv1_aux:: "env \<Rightarrow> bool" where
-"inc_index_inv1_aux e \<equiv> inc_index_inv1 e \<and> \<not>(xs e)!(i e) > 1 \<and> \<not>(xs e)!(i e) < 1 \<and> loop_update_action_pre e"
-
 lemma inc_index_invariantRed: "spec inc_index_inv1_aux inc_index (GG inc_index_inv1)"
   unfolding inc_index_inv1_aux_def inc_index_inv1_def dnfp_precondition_def loop_update_action_pre_def  GG_def low_invariant_is_0_Env_def
   apply(simp_all add: inc_index_def)
   apply(intro get_rule; intro allI; simp)
   by (simp add: spec_def i_Env_def put_def get_state_def put_state_def)
-
-definition inc_index_inv2_aux:: "env \<Rightarrow> bool" where
-"inc_index_inv2_aux e \<equiv> inc_index_inv2 e \<and> \<not>(xs e)!(i e) > 1 \<and> \<not>(xs e)!(i e) < 1 \<and> loop_update_action_pre e"
-                                           
+                               
 lemma inc_index_invariantWhite: "spec inc_index_inv2_aux inc_index (GG inc_index_inv2)"
   unfolding inc_index_inv2_aux_def dnfp_precondition_def inc_index_inv2_def loop_update_action_pre_def  GG_def invariant_low_to_j_is_1_Env_def
   apply(simp_all add: inc_index_def)
@@ -405,27 +365,17 @@ lemma inc_index_invariantWhite: "spec inc_index_inv2_aux inc_index (GG inc_index
   apply (simp add: spec_def i_Env_def put_def get_state_def put_state_def)
   using le_eq_less_or_eq by fastforce
 
-definition inc_index_inv3_aux:: "env \<Rightarrow> bool" where
-"inc_index_inv3_aux e \<equiv> inc_index_inv3 e \<and> \<not>(xs e)!(i e) > 1 \<and> \<not>(xs e)!(i e) < 1 \<and> loop_update_action_pre e"
-
 lemma inc_index_invariantBlue: "spec inc_index_inv3_aux inc_index (GG inc_index_inv3)"
   unfolding inc_index_inv3_aux_def inc_index_inv3_def dnfp_precondition_def loop_update_action_pre_def  GG_def high_invariant_is_2_Env_def
   apply(simp_all add: inc_index_def)
   apply(intro get_rule; intro allI; simp)
   by (simp add: spec_def i_Env_def put_def get_state_def put_state_def)
 
-definition inc_index_inv :: "env \<Rightarrow> bool" where
-"inc_index_inv s \<equiv> (inc_index_inv3 s \<and> inc_index_inv2 s \<and> inc_index_inv1 s)"
-
-definition inc_index_inv_aux:: "env \<Rightarrow> bool" where
-"inc_index_inv_aux e \<equiv> inc_index_inv e \<and> \<not>(xs e)!(i e) > 1 \<and> \<not>(xs e)!(i e) < 1 \<and> loop_update_action_pre e"
-
 lemma inc_index_invariants: "spec inc_index_inv_aux inc_index (GG inc_index_inv)"
   unfolding inc_index_inv_aux_def inc_index_inv_def GG_def
   by (smt GG_def case_prod_beta' inc_index_inv1_aux_def inc_index_inv2_aux_def inc_index_inv3_aux_def inc_index_invariantBlue inc_index_invariantRed inc_index_invariantWhite spec_def)
 
-subsection\<open>Loop update action\<close>
-
+section\<open>Loop update action\<close>
 lemma loop_update_action_spec: "spec (loop_update_action_pre_aux e) loop_update_action (GG (loop_update_action_post e))"
   unfolding loop_update_action_pre_aux_def GG_def loop_update_action_post_def loop_update_action_pre_def dnfp_precondition_def dnfp_post_def
   apply(simp add: loop_update_action_def)
@@ -554,17 +504,7 @@ lemma loop_update_action_spec: "spec (loop_update_action_pre_aux e) loop_update_
   apply (simp add: diff_le_mono2)
   by (simp add: Suc_diff_Suc)
 
-subsubsection\<open>Invariants - Loop_update_action \<close>
-
-definition loop_update_action_inv1_aux:: "env \<Rightarrow> bool" where
-"loop_update_action_inv1_aux e \<equiv> loop_update_action_inv1 e \<and> loop_update_action_pre e"
-
-definition loop_update_action_inv2_aux:: "env \<Rightarrow> bool" where
-"loop_update_action_inv2_aux e \<equiv> loop_update_action_inv2 e \<and> loop_update_action_pre e"
-
-definition loop_update_action_inv3_aux:: "env \<Rightarrow> bool" where
-"loop_update_action_inv3_aux e \<equiv> loop_update_action_inv3 e \<and> loop_update_action_pre e"
-                                                             
+subsubsection\<open>Invariants - Loop_update_action \<close>                                                       
 lemma loop_update_action_invariantRed: "spec loop_update_action_inv1_aux loop_update_action (GG loop_update_action_inv1)"
    unfolding loop_update_action_inv1_aux_def loop_update_action_inv1_def dnfp_precondition_def  loop_update_action_pre_def  GG_def low_invariant_is_0_Env_def
   apply(simp add: loop_update_action_def)
@@ -618,12 +558,6 @@ lemma loop_update_action_invariantBlue: "spec loop_update_action_inv3_aux loop_u
      apply (smt GG_def case_prodD case_prodI2 inc_lowbound_inv3_aux_def inc_lowbound_inv3_def inc_lowbound_invariantBlue less_numeral_extra(1) loop_update_action_inv3_def spec_def)
     apply (smt GG_def One_nat_def dec_highbound_inv3_aux_def dec_highbound_inv3_def dec_highbound_invariantBlue loop_update_action_inv3_def spec_def split_beta')
    by (smt GG_def One_nat_def Suc_less_eq inc_index_inv3_aux_def inc_index_inv3_def inc_index_invariantBlue less_Suc_eq loop_update_action_inv3_def spec_def split_beta')
-
-definition loop_update_action_inv :: "env \<Rightarrow> bool" where
-"loop_update_action_inv s \<equiv> (loop_update_action_inv3 s \<and> loop_update_action_inv2 s \<and> loop_update_action_inv1 s)"
-
-definition loop_update_action_inv_aux :: "env \<Rightarrow> bool" where
-"loop_update_action_inv_aux s \<equiv> (loop_update_action_inv s \<and> loop_update_action_pre s)"
 
 lemma loop_update_action_invariants: "spec loop_update_action_inv_aux loop_update_action (GG loop_update_action_inv)"
   unfolding loop_update_action_inv_aux_def GG_def loop_update_action_inv_def
