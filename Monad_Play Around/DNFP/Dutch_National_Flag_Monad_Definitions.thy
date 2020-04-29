@@ -29,8 +29,12 @@ text\<open>The DNFP-algorithm has been split up in multiple definitions (non-rec
 Each of the definitions has been proved individually based on a pre-condition and post-condition. \<close>
 
 text\<open>The pre- and post-conditions are placed in a hierarchy where the conditions from the nested definitions inherit (and strength) the conditions from the outer definitions/functions.
-  This structure/hierarchy of the pre- a post-conditions makes it possible to use a lot of the already established lemmas of the simple definitions inside the compound definitions\<close>
+    This structure/hierarchy of the pre- a post-conditions makes it possible to use a lot of the already established lemmas of the simple definitions inside the compound definitions\<close>
+
 text\<open>A thing to note about the use of the lemmas inside the compound methods is that can't be done if too much rewrite is done - because it makes it impossible for Isabelle to see the relationship between to post-conditions\<close>
+
+text\<open>Some of the pre- and post-conditions take more than one environment. This is because the post-condition contains some chceks about the relation between the variables in the initial and final state (for example the variable i is greater in the final state compared to the initial state).
+    In this case it is needed to capture the intial state (as an additional parameter of both the pre- and post-condition) inorder to use it in the post-condition\<close>
 
 section\<open>Proof structure\<close>
 
@@ -130,6 +134,7 @@ definition loop_update_action where
 
 section\<open>Invariants definitions\<close>
 text\<open>The invariants are taken from \url{https://en.wikipedia.org/wiki/Dutch_national_flag_problem} and more information about them can be seen in the general description of the algorithm.\<close>
+text\<open>It can be added that qunatifiers give the best proof-support of list/ranges compared to other list-functions.\<close>
 definition low_invariant_is_0_Env where
 "low_invariant_is_0_Env e \<equiv> (\<forall>x. x < (low e) \<longrightarrow> (xs e)!x = 0)"
 
@@ -140,13 +145,15 @@ definition high_invariant_is_2_Env where
 "high_invariant_is_2_Env e\<equiv> (\<forall>x. x \<ge> (high e) \<and> x < length (xs e) \<longrightarrow> (xs e)!x = 2)"
 
 section\<open>General DNFP conditions\<close>
-text\<open>This is the general invarant on the relationship between the variables in the environment.\<close>
+text\<open>This is the general invariant on the relationship between the variables in the environment.\<close>
 definition dnfp_variables_invariants:: "env \<Rightarrow> bool" where
 "dnfp_variables_invariants e \<equiv> high e \<ge> i e
                       \<and> i e \<ge> low e 
                       \<and> length (xs e) \<ge> high e
                       \<and> set (xs e) \<subseteq> {0,1,2}"
 
+text\<open>This post-condition states that the variables i, low and difference between high and i the  will never decrease.
+    High will never increase and the the multiset and length of the array will never change.\<close>
 definition dnfp_post where 
 "dnfp_post e e2 \<equiv> length (xs e) = length (xs e2)
                   \<and> high e \<ge> high e2
@@ -156,7 +163,7 @@ definition dnfp_post where
                   \<and> mset (xs e) = mset (xs e2)"
 
 subsection\<open>DNFP invariants\<close>
-text\<open>These definitions add the \<close>
+text\<open>These definitions add the inviariant of the relationsship with the the different invariants on the range\<close>
 definition dnfp_inv1:: "env \<Rightarrow> bool" where 
 "dnfp_inv1  e \<equiv> dnfp_variables_invariants e
                 \<and> low_invariant_is_0_Env e"
@@ -172,6 +179,8 @@ definition dnfp_inv3:: "env \<Rightarrow> bool" where
 definition dnfp_inv :: "env \<Rightarrow> bool" where
 "dnfp_inv e \<equiv> ((dnfp_inv3 e) \<and> (dnfp_inv2 e) \<and> (dnfp_inv1 e))"
 
+subsubsection\<open>Other dnfp spec definitions\<close>
+text\<open>This is the final state of the algortihm\<close>
 definition dnfp_post_final_spec where
 "dnfp_post_final_spec e \<equiv> dnfp_inv e \<and> i e = high e"
 
@@ -192,12 +201,13 @@ definition array_sorted where
 "array_sorted e \<equiv> sorted(xs e)"
 
 subsection\<open>Loop update action definitions\<close>
-text\<open>These definitions rely on the definitions on dnfp, but in the precondition they have an extra assumption that gets inferred from the conditions-statement inside the function\<close>
+text\<open>These definitions extend the basic definitions of dnfp. An extra assumption extends the preconditions. The assumption can be inferred from the conditions-statement inside the function\<close>
 text\<open>The post-condition is also for each of the definitions a little stronger compared to the more general\<close>
 
 definition loop_update_action_pre:: "env \<Rightarrow> bool" where
 "loop_update_action_pre e \<equiv> dnfp_variables_invariants e \<and> high e > i e"
 
+text\<open>This is an example of a pre-condition that takes an extra env as a parameter. This is used to capture the initial state so it can be used in the post-condition.\<close>
 definition loop_update_action_pre_aux:: "env \<Rightarrow> env \<Rightarrow> bool" where
 "loop_update_action_pre_aux e s \<equiv> s = e
                               \<and> loop_update_action_pre e"
@@ -207,7 +217,6 @@ definition loop_update_action_post where
                                 \<and> high e - i e = Suc(high e' - i e')"
 
 subsubsection\<open>Loop update action - Invariants\<close>
-text\<open>The aux methods extend the inv with the property that can be inferred from the conditional-statement before the loop_update_action call\<close>
 definition loop_update_action_inv1:: "env \<Rightarrow> bool" where
 "loop_update_action_inv1 e \<equiv> dnfp_inv1 e \<and> loop_update_action_pre e"
 
@@ -220,12 +229,12 @@ definition loop_update_action_inv3:: "env \<Rightarrow> bool" where
 definition loop_update_action_inv :: "env \<Rightarrow> bool" where
 "loop_update_action_inv s \<equiv> (dnfp_inv s \<and> loop_update_action_pre s)"
 
-section\<open>Definitions of methods/definitions inside Loop update action\<close>
+section\<open>Definitions of the methods from inside the conditional-statement inside Loop update action\<close>
 text\<open>These definitions rely on the definitions on loop update action, but in the precondition they have an extra assumption that gets inferred from the conditions-statement inside loop-update-action\<close>
 text\<open>The post-condition is also for each of the definitions a little stronger compared to the more general loop_update-action-post\<close>
 
 subsection\<open>Inc Lowbound definitions\<close>
-
+text\<open>This definitions is just the same as the ones for loop update action, but they are added with the information that can be infered from the conditional-statement. \<close>
 definition inc_lowbound_pre:: "env \<Rightarrow> env \<Rightarrow> bool" where 
 "inc_lowbound_pre e s \<equiv> s = e
                         \<and> loop_update_action_pre s
@@ -238,7 +247,7 @@ definition inc_lowbound_post:: "env \<Rightarrow> env \<Rightarrow> bool" where
                           \<and> i e < i e'"
 
 subsubsection\<open>Inc Index invariants\<close>
-text\<open>The aux methods extend the inv with the property that can be inferred from the conditional-statement before the function call\<close>
+text\<open>These invariants is the invariant from the loop-update-action along with the assumption that can be infered from the conditional-statement.\<close>
 definition inc_lowbound_inv1:: "env \<Rightarrow> bool" where
 "inc_lowbound_inv1 e \<equiv> loop_update_action_inv1 e \<and> xs e ! i e < 1"
 
@@ -252,6 +261,7 @@ definition inc_lowbound_inv_pre :: "env \<Rightarrow> bool" where
 "inc_lowbound_inv_pre s \<equiv> (loop_update_action_inv s \<and> xs s ! i s < 1)"
 
 subsection\<open>Dec Highbound definitions\<close>
+text\<open>This definitions is just the same as the ones for loop update action, but they are added with the information that can be infered from the conditional-statement. \<close>
 definition dec_highbound_pre where 
 "dec_highbound_pre e s\<equiv> e = s
                         \<and> loop_update_action_pre e 
@@ -266,8 +276,7 @@ definition dec_highbound_post where
                               \<and> loop_update_action_post e e'"
 
 subsubsection\<open>Dec Highbound invariants\<close>
-text\<open>The aux methods extend the inv with the property that can be inferred from the conditional-statement before the function call\<close>
-
+text\<open>These invariants is the invariant from the loop-update-action along with the assumption that can be infered from the conditional-statement.\<close>
 definition dec_highbound_inv1:: "env \<Rightarrow> bool" where
 "dec_highbound_inv1 e \<equiv> loop_update_action_inv1 e \<and> xs e ! i e > 1"
 
@@ -281,6 +290,7 @@ definition dec_highbound_inv :: "env \<Rightarrow> bool" where
 "dec_highbound_inv s \<equiv> (loop_update_action_inv s \<and> xs s ! i s > 1 )"
 
 subsection\<open>Inc index definitions\<close>
+text\<open>This definitions is just the same as the ones for loop update action, but they are added with the information that can be infered from the conditional-statement. \<close>
 definition inc_index_pre:: "env \<Rightarrow> env \<Rightarrow> bool" where 
 "inc_index_pre e s \<equiv> e = s 
                       \<and> loop_update_action_pre e
@@ -294,8 +304,7 @@ definition inc_index_post:: "env \<Rightarrow> env \<Rightarrow> bool" where
                       \<and> loop_update_action_post e e'"
 
 subsubsection\<open>Inc index invariants\<close>
-text\<open>The aux methods extend the invariant with the property that can be inferred from the conditional-statement before the function call\<close>
-definition inc_index_inv1:: "env \<Rightarrow> bool" where
+text\<open>These invariants is the invariant from the loop-update-action along with the assumption that can be infered from the conditional-statement.\<close>
 "inc_index_inv1 e \<equiv> loop_update_action_inv1 e \<and> \<not>(xs e)!(i e) > 1 \<and> \<not>(xs e)!(i e) < 1"
 
 definition inc_index_inv2:: "env \<Rightarrow> bool" where
