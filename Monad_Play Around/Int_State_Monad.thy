@@ -104,8 +104,6 @@ lemma fib_base[simp]: "snd (run_state (monfib_wrap 0) (Suc 0)) = fib_wrap 0"
   by (simp add: fib_wrap_def monfib_wrap_def put_def skip_def)
 
 
-
-
 lemma fib_basic: "snd (run_state (monfib_wrap n) 1) = fib_wrap n"
   apply (induction n)
    apply (simp)
