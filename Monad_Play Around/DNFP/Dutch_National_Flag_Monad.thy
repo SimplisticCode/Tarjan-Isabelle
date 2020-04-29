@@ -174,6 +174,10 @@ definition init_env:: "nat array \<Rightarrow> env" where
   "init_env l \<equiv> \<lparr>high = (length l),            low = 0,
                  i = 0,                         xs = l\<rparr>"
 
+lemma "e = (init_env x) \<and> set(x) \<subseteq> {0,1,2} \<Longrightarrow> dnfp_variables_invariants e"
+  unfolding init_env_def dnfp_variables_invariants_def
+  by simp
+
 value \<open>snd(run_state (dnfp_mon 5) (init_env [0,2,2,1,2]))\<close>
 value \<open>snd(run_state (dnfp_mon 9) (init_env [0,2,2,0,1,0,2,1,2]))\<close>
 value \<open>snd(run_state (dnfp_mon 3)(init_env [2,1,0]))\<close>
