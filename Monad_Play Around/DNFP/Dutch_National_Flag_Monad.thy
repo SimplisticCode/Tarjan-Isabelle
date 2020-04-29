@@ -77,7 +77,7 @@ lemma dnfp_invariantBlue: "spec dnfp_inv3 (dnfp_mon n) (GG dnfp_inv3)"
      apply(simp add: spec_def)
   by(simp add: skip_def)
 
-text\<open>All invariants are preserved\<close>
+text\<open>All invariants are preserved by the function\<close>
 lemma dnfp_mon_invariants: "spec (dnfp_mon_inv) (dnfp_mon n) (GG dnfp_mon_inv)"
   by (smt GG_def dnfp_invariantBlue dnfp_invariantRed dnfp_invariantWhite dnfp_mon_inv_def spec_def split_def)
 
@@ -107,6 +107,7 @@ lemma dnfp_mon_main: "spec (dnfp_mon_spec) (dnfp_mon n) (GG dnfp_mon_spec)"
   apply blast
   by(simp add: spec_def skip_def)
 
+text\<open>This lemma is used to established that high and i will be equal if the variables are initiated with the right value (defined by the invariant on the environment)\<close>
 lemma aux1: "(spec (\<lambda>e. dnfp_variables_invariants e \<and> n = high e - i e) (dnfp_mon n)
                 (\<lambda>x e. high e = i e)) \<Longrightarrow>
            spec
