@@ -305,6 +305,7 @@ definition inc_index_post:: "env \<Rightarrow> env \<Rightarrow> bool" where
 
 subsubsection\<open>Inc index invariants\<close>
 text\<open>These invariants is the invariant from the loop-update-action along with the assumption that can be infered from the conditional-statement.\<close>
+definition inc_index_inv1:: "env \<Rightarrow> bool" where
 "inc_index_inv1 e \<equiv> loop_update_action_inv1 e \<and> \<not>(xs e)!(i e) > 1 \<and> \<not>(xs e)!(i e) < 1"
 
 definition inc_index_inv2:: "env \<Rightarrow> bool" where
