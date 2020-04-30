@@ -8,8 +8,6 @@ begin
 section\<open>Description of the DNFP-algortihm\<close>
 text\<open>The Dutch national flag problem is the problem of sorting an array into three different regions: A red-interval (0 in this version), A white-interval (1) and A Blue-interval (2)\<close>
 
-text\<open>The Dutch national flag problem is the problem of sorting an array into three different regions: A red-interval (0 in this version), A white-interval (1) and A Blue-interval (2)\<close>
-
 text\<open>The algorithm uses 3 variables to keep track of the three ranges:
 \begin{itemize}
   \item @{text Low}: the red range is all indexes before @{text low}

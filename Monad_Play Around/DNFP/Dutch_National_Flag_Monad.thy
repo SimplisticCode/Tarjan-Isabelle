@@ -77,8 +77,8 @@ text\<open>All invariants are preserved by the dnfp-function\<close>
 lemma dnfp_mon_invariants: "spec (dnfp_inv) (dnfp_mon n) (GG dnfp_inv)"
   by (smt GG_def dnfp_invariantBlue dnfp_invariantRed dnfp_invariantWhite dnfp_inv_def spec_def split_def)
 
-section\<open>Proof of \<close>
-text\<open>DNFP mon preserves the invariants on the ranges and the bounds of the variables. This proof is actually not necessary to proof that the method sorts the array\<close>
+subsection\<open>Aux. proofs of the DNFP\<close>
+text\<open>@{text Dnfp_mon} preserves the invariants on the ranges and the bounds of the variables. This proof is actually not necessary to proof that the method sorts the array\<close>
 lemma dnfp_env_inv: "spec (dnfp_mon_spec) (dnfp_mon n) (GG dnfp_mon_spec)"
   unfolding GG_def dnfp_mon_spec_def
   apply(induction n rule: dnfp_mon.induct)
