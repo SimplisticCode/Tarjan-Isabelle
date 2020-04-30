@@ -3,12 +3,14 @@ imports
   Main
   "~~/src/HOL/Library/State_Monad"
 begin
-
+section\<open>Proof of the fibonacci function using a monad\<close>
+text\<open>Definition of the functions to interact with the monad\<close>
 definition return:: "'a \<Rightarrow> ('b, 'a) state" where "return = State_Monad.return"
 definition get:: "(nat, nat) state" where "get = State (\<lambda>x. (x,x))"
 definition put:: "nat \<Rightarrow> (nat, unit) state" where "put x = State (\<lambda>_. ((),x))"
 definition skip:: "(nat, unit) state" where "skip = State (\<lambda>x. ((),x))"
 
+subsection\<open>Fibonacci function definitions\<close>
 fun fibacc :: "nat \<Rightarrow> nat => nat \<Rightarrow> nat" where
 fa1: "fibacc 0 a b = a"| 
 fa2: "fibacc (Suc 0) a b = b"|
@@ -22,6 +24,7 @@ fun fib :: "nat => nat" where
 | "fib (Suc 0) = 1"
 | "fib (Suc (Suc x)) = fib x + fib (Suc x)"
 
+text\<open>This is the monadic function. It stores the previous fibonacci-number in the monad\<close>
 fun monfibacc :: "nat \<Rightarrow> nat => (nat, unit) state" where
 m1:  "monfibacc 0 a =  do{put a}"| 
 m2:  "monfibacc (Suc 0) a = do{b \<leftarrow> get; put b}"| 
