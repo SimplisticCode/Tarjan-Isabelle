@@ -4,6 +4,7 @@ imports
   "HOL-Eisbach.Eisbach"
 begin
 
+text\<open>This is some experiments with Eisbach done in order to see if they could simplify the proof\<close>
 method rewrite_env uses simps =
 (match conclusion in "?P (x :: env)" for x \<Rightarrow>
   \<open>simp add: spec_def put_def get_state_def put_state_def return_def get_def simps\<close>)

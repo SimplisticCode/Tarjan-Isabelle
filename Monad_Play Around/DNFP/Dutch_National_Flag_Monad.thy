@@ -4,10 +4,10 @@ imports
   "HOL-Library.LaTeXsugar"
 begin
 
-section\<open>DNFP\<close>
+section\<open>Proof of DNFP\<close>
 text\<open>A version using a state-monad for storing the array and the intermediate variable.
-This function takes a parameter that defines the size of the unsorted array (the difference between high and i).
-This makes the recursion well-defined and will ensure termination since loop-update-action decreases the difference for every single call\<close>
+This function takes a parameter that defines the size of the unsorted array (the difference between the variables @{text high} and @{text i} due to the invariant on the ranges).
+This makes the recursion well-defined and will ensure termination since @{text loop_update_action} decreases the difference for every single call\<close>
 fun dnfp_mon:: "nat \<Rightarrow> (env, unit) state" where
   case0:"dnfp_mon 0  = skip"|
   caseN:"dnfp_mon (Suc n) = do {
@@ -20,7 +20,8 @@ fun dnfp_mon:: "nat \<Rightarrow> (env, unit) state" where
                       )}"
 
 subsection\<open>DNFP - Invariants proof\<close>
-text\<open>These proofs use the already established lemmas about how the definitions/functions that dnfp-mon consists of all preserve the invariants.\<close>
+text\<open>These proofs show that @{text dnfp_mon} preserves the invariants.
+   They use the already established lemmas about how the definitions/functions that @{text dnfp_mon} consists of all preserve the invariants of the ranges (red, white and blue).\<close>
 lemma dnfp_invariantRed: "spec (dnfp_inv1) (dnfp_mon n) (GG dnfp_inv1)"
   unfolding dnfp_inv1_def GG_def 
   apply(induction n rule: dnfp_mon.induct)
@@ -78,7 +79,7 @@ lemma dnfp_mon_invariants: "spec (dnfp_inv) (dnfp_mon n) (GG dnfp_inv)"
 
 section\<open>Proof of \<close>
 text\<open>DNFP mon preserves the invariants on the ranges and the bounds of the variables. This proof is actually not necessary to proof that the method sorts the array\<close>
-lemma dnfp_mon_inv: "spec (dnfp_mon_spec) (dnfp_mon n) (GG dnfp_mon_spec)"
+lemma dnfp_env_inv: "spec (dnfp_mon_spec) (dnfp_mon n) (GG dnfp_mon_spec)"
   unfolding GG_def dnfp_mon_spec_def
   apply(induction n rule: dnfp_mon.induct)
   apply(simp add: spec_def skip_def)
@@ -95,7 +96,7 @@ lemma dnfp_mon_inv: "spec (dnfp_mon_spec) (dnfp_mon n) (GG dnfp_mon_spec)"
   apply blast
   by(simp add: spec_def skip_def)
 
-text\<open>This lemma is used to established that high and i will be equal if the variables are initiated with the right value (defined by the invariant on the environment)\<close>
+text\<open>This lemma is used to establish that variables @{text high} and @{text i} will be equal if the variables are initiated with the right value (defined by the invariant on the environment @{text dnfp_variables_invariants})\<close>
 lemma aux1: "(spec (\<lambda>e. dnfp_variables_invariants e \<and> n = high e - i e) (dnfp_mon n)
                 (\<lambda>x e. high e = i e)) \<Longrightarrow>
            spec
@@ -135,9 +136,9 @@ lemma aux1: "(spec (\<lambda>e. dnfp_variables_invariants e \<and> n = high e - 
   by blast
 
 subsection\<open>Main proofs\<close>
-
-text\<open>If dnfp is called with a proper environment and n is the difference between high and i. When High and I will be equal after the termination of the function.
-This can be used the termination. And this proof can together with the dnfp-mon main-proof be used to proof that the array will be sorted by the dnfp-function\<close>
+text\<open>If @{text dnfp_mon} is called with a proper environment and the parameter of the function @{text n} is the difference between the variables @{text high} and @{text i}. 
+When @{text high} and @{text i} will be equal after the termination of the function.
+This lemma can be used the termination. And this proof can together with the dnfp-mon main-proof be used to prove that @{text dnfp_mon} will sort the array \<close>
 lemma dnfp_mon_termination: "spec (dnfp_mon_pre n) (dnfp_mon n) (GG (i_high_equal n))"
   unfolding GG_def dnfp_mon_pre_def dnfp_mon_spec_def i_high_equal_def
   apply(induction n rule: dnfp_mon.induct)
@@ -148,21 +149,25 @@ lemma dnfp_mon_termination: "spec (dnfp_mon_pre n) (dnfp_mon n) (GG (i_high_equa
   using aux1 apply blast
   by(simp add: spec_def skip_def dnfp_variables_invariants_def)
 
-text\<open>The invariants and the fact i = high means that the the entire array will be sorted. 
-    This lemma makes it possible to show that the dnfp-function will sort the array\<close>
+text\<open>The invariants and the fact @{text i} = @{text high} means that the the entire array will be sorted. 
+    This lemma makes it possible to show that @{text dnfp_mon} will sort the array\<close>
 lemma dnfp_mon_isSorted: "dnfp_post_final_spec e \<Longrightarrow> (array_sorted e)" 
   unfolding dnfp_post_final_spec_def dnfp_inv_def array_sorted_def
   by (smt Suc_1 Suc_leD dnfp_inv1_def dnfp_inv2_def dnfp_inv3_def high_invariant_is_2_Env_def invariant_low_to_j_is_1_Env_def less_numeral_extra(1) less_or_eq_imp_le less_trans low_invariant_is_0_Env_def not_less sorted_iff_nth_mono_less)
 
 text\<open>The array is sorted after the termination of the dnfp function. 
   This proof depends mainly on two proofs. 
-    The first proof is that: i and high are equal by the termination of dnfp-mon, and secondly, the function preserves the invariant of the ranges. 
-    These two facts are by the proof of lemma @{text dnfp_mon_isSorted} enough to show that the array is sorted in the final state.\<close>
-lemma dnfp_mon_main_list_sorted: "spec (dnfp_mon_spec_aux n) (dnfp_mon n) (GG array_sorted)"
-  unfolding GG_def dnfp_mon_spec_aux_def array_sorted_def
+\begin{enumerate}
+  \item The variables @{text i} and @{text high} are equal by the termination of @{text dnfp_mon}
+  \item @{text Dnfp_mon} preserves the invariant of the ranges.
+\end{enumerate}
+These two facts are by the proof of lemma @{text dnfp_mon_isSorted} enough to show that the array is sorted in the final state.\<close>
+theorem dnfp_mon_main_list_sorted: "spec (dnfp_mon_spec_aux n) (dnfp_mon n) (GG array_sorted)"
+  unfolding GG_def dnfp_mon_spec_aux_def
   apply(induction n rule: dnfp_mon.induct)
-  apply (simp add: spec_def skip_def dnfp_mon_isSorted dnfp_mon_spec_def dnfp_post_final_spec_def dnfp_variables_invariants_def)
-  by (smt GG_def dnfp_mon_invariants dnfp_mon_isSorted dnfp_mon_termination dnfp_mon_pre_def dnfp_mon_spec_def dnfp_post_final_spec_def i_high_equal_def spec_def split_beta')
+   apply (simp add: spec_def skip_def  dnfp_mon_spec_def  dnfp_variables_invariants_def)
+  using array_sorted_def dnfp_mon_isSorted dnfp_post_final_spec_def le_antisym apply blast
+  by (smt GG_def case_prod_beta' dnfp_mon_invariants dnfp_mon_isSorted dnfp_mon_pre_def dnfp_mon_spec_def dnfp_mon_termination dnfp_post_final_spec_def i_high_equal_def spec_def)
 
 section\<open>Examples of DNFP\<close>
 text\<open>The definiton of how to set up the state-monad/environment with the right values based on an array.\<close>
@@ -175,6 +180,7 @@ lemma "e = (init_env x) \<and> set(x) \<subseteq> {0,1,2} \<Longrightarrow> dnfp
   unfolding init_env_def dnfp_variables_invariants_def
   by simp
 
+text\<open>This is just some examples of to run the algortihm\<close>
 value \<open>snd(run_state (dnfp_mon 5) (init_env [0,2,2,1,2]))\<close>
 value \<open>snd(run_state (dnfp_mon 9) (init_env [0,2,2,0,1,0,2,1,2]))\<close>
 value \<open>snd(run_state (dnfp_mon 3)(init_env [2,1,0]))\<close>
