@@ -180,7 +180,7 @@ lemma "e = (init_env x) \<and> set(x) \<subseteq> {0,1,2} \<Longrightarrow> dnfp
   unfolding init_env_def dnfp_variables_invariants_def
   by simp
 
-text\<open>This is just some examples of to run the algortihm\<close>
+text\<open>This is just some examples of how to run the algorithm and some concrete assertions\<close>
 value \<open>snd(run_state (dnfp_mon 5) (init_env [0,2,2,1,2]))\<close>
 value \<open>snd(run_state (dnfp_mon 9) (init_env [0,2,2,0,1,0,2,1,2]))\<close>
 value \<open>snd(run_state (dnfp_mon 3)(init_env [2,1,0]))\<close>
@@ -189,4 +189,11 @@ value \<open>assert(sorted(xs(snd(run_state (dnfp_mon 5) (init_env[0,2,2,1,2])))
 value \<open>assert(sorted(xs(snd(run_state (dnfp_mon 9) (init_env[0,2,2,0,1,0,2,1,2])))))\<close>
 value \<open>assert(sorted(xs(snd(run_state (dnfp_mon 3) (init_env[2,1,0])))))\<close>
 
+section\<open>Experiences\<close>
+text\<open>A general rule of thumb when carrying out a single proof is to divide the methods as much as possible and limit the number of parameters. By following these rules, it simplifies the proof substantial since it is a lot easier to proof five small methods compared to one big. It is also far easier to reason about small methods.
+It is also vital to establish a hierarchy of pre- and post-conditions that can be used in the proof. This hierarchy enables the reuse of lemmas of the simple methods inside the compound methods.\<close>
+text\<open>Not all programs work with the current syntax. An example of this is two get-statements in a row inside a method. This syntax is currently not supported by the HOL proof-rules. Instead, the two get-statements should be captured into one get-statement that returns multiple values.
+     I also have experienced how methods higher-order functions like @{text nths} from the list library should be avoided, since they have bad proof-support. Instead, quantifiers should be used when working with lists.\<close>
+
+text\<open>I have also learned that if a proof can't be proved by first rewriting and afterward Sledgehammer. It means that either it is unprovable or Isabelle needs some more information to prove it. This information can be given by adding some more lemmas. An example of this is the lemmas that can be seen the section Aux. lemmas about values inside the array.\<close>
 end

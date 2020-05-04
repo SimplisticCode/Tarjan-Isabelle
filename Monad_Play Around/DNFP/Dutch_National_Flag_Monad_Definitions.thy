@@ -51,7 +51,7 @@ text\<open>The proofs have all the same structure of a pre-condition that gets t
   \item Simp to extract the definition of the method
   \begin{itemize}
     \item Get is first - apply the get-rule. 
-    \item All quantifier is first - apply the allI-rule to turn it into a LOOK HERE
+    \item An all quantifier is first - apply the allI-rule to turn it into an Isabelle Universal Quantifier.
     \item The final state is a conjunction - use the conj-rule-right to prove the goals separately 
     \item Put is first and gets followed by something - use the seq-rule to split it up. The seq rule shall contain what can be concluded from the put.
     \item Put followed by nothing (Usually the case after application of a  seq-rule) - use the simp to discharge the goal. If it doesn't prove the goal, use Sledgehammer, or rewrite the seq-rule.

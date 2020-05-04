@@ -5,7 +5,7 @@ session DNFP = HOL +
     "HOL-Library"
     "HOL-Eisbach"
   theories [document = false]
-    "../State_Monad_HL"
+    "~~/src/HOL/Library/State_Monad"
   theories
     Dutch_National_Flag_Monad
   document_files

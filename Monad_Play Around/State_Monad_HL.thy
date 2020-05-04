@@ -4,14 +4,23 @@ imports
   "~~/src/HOL/Library/State_Monad"
 begin
 
-text\<open>\<close>
+section\<open>Introduction\<close>
+text\<open>This report presents the proof of the Dutch National Flag Problem in Isabelle using a Hoare Calculus defined by Stefan Hallerstede. 
+    The proof has been carried out using this calculus by Simon Thrane Hansen as a part of some learning exercises. 
+    This document serves as a technical report of the proof and presents the Hoare calculus. The document first presents the Hoare calculus. 
+    Afterward comes a presentation of the algorithm and its properties. After this, follows all the definitions of both the method-definitions and their corresponding pre- and post-conditions. 
+    This section gets followed by the proofs of the definitions. Finally, the algorithm is defined as a recursive function which gets proved in the final part of the report.\<close>
+
+
+section\<open>Hoare calculus\<close>
+text\<open>Basic definitions taht can be useful inside as a parameter to spec in a proof\<close>
 definition TT:: "'a \<Rightarrow> bool" where "TT x = True"
 definition TTT:: "'b \<Rightarrow> 'a \<Rightarrow> bool" where "TTT x y = True"
 definition FF:: "'a \<Rightarrow> bool" where "FF x = False"
 definition GG:: "('a \<Rightarrow> bool) \<Rightarrow> ('b => 'a \<Rightarrow> bool)" where "GG p x = p"
 definition UU:: "('a \<Rightarrow> bool) \<Rightarrow> (unit => 'a \<Rightarrow> bool)" where "UU p x = p"
 
-section\<open>Methods to get interact with the state-monad\<close>
+text\<open>Methods to get describe the basic state changes. These are described by state-monad which encapsulates the state\<close>
 definition return:: "'a \<Rightarrow> ('b, 'a) state" where "return = State_Monad.return"
 definition get_state:: "('a, 'a) state" where "get_state = State (\<lambda>x. (x,x))"
 definition put_state:: "'a \<Rightarrow> ('a, unit) state" where "put_state x = State (\<lambda>_. ((),x))"
@@ -28,7 +37,8 @@ definition assign:: "('a \<Rightarrow> 'b \<Rightarrow> 'a) \<Rightarrow> ('a \<
 definition spec:: "('a \<Rightarrow> bool) \<Rightarrow> ('a, 'b) state \<Rightarrow> ('b \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool" where 
   "spec p S q = (\<forall>x. p x  \<longrightarrow> (let (y, z) = run_state S x in q y z))"
 
-section\<open>Rules based on \<close>
+subsection\<open>Hoare logic\<close>
+text\<open>Rules based on section 3 in Verification of Sequential and Concurrent Programs\<close>
 theorem get_state_rule: "spec (\<lambda>x. p x x) (get_state) p"
   by (simp add: get_state_def spec_def)
 
@@ -39,6 +49,8 @@ theorem get_rule: "\<forall>x. spec (\<lambda>y. p y \<and> v x = v y) (S (v x))
 theorem return_rule: "spec (p v) (return v) p"
   by (simp add: return_def spec_def)
 
+text\<open>The sequential rule describes all intermediate states that can be both a post-condition of statement @{text S} 
+  with the pre-condition @{text p} which after execution of statement @{text T} will result in a final-state of @{text r}\<close>
 theorem seq_rule: "\<lbrakk>spec p S q; \<forall>x. spec (q x) T r\<rbrakk> \<Longrightarrow> spec p (do { S; T }) r"
   apply (simp add: spec_def)
   by fastforce
