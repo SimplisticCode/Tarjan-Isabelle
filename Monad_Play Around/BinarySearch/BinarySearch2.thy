@@ -4,7 +4,7 @@ imports
   "../State_Monad_HL"
 begin
 
-section\<open>Proof Binary Search\<close>
+section\<open>Binary Search\<close>
 text\<open>This is proof of the binary search algorithm. It is inspired by the proof of the same algorithm in "Verification of Sequential and Concurrent Programs".
      The algorithm is straightforward; it searches recursively after a specific value in a sorted list of numbers. It halves the size of the array it is looking at for each iteration (using the fact that the array is sorted).
      If the number exists in the array it will be found - which in this case means that @{text mid} is the index that is storing the value.\<close>
@@ -230,6 +230,10 @@ This concerns in this theory the ranges from which the quantified variables are 
 \end{itemize}
 When working with quantifiers and arrays, it is important to make sure that all variables that are satisfying the predicates of the range are also valid indexes in the array. This does often require an addition predicate about the quantified variable should be in the array (less than the length of the array)
 
-I will also like to add that some algorithms are easier constructed using a syntax that contains a while-loop. \<close>
+I will also like to add that some algorithms are easier constructed using a syntax that contains a while-loop. 
+
+It is easier to prove something where all variables are stored in the state-monad and not being passed around in the program.
+This makes all functions simpler and has the benefit that the state of the program can be expected and used in pre- and post-conditions.
+\<close>
 
 end
