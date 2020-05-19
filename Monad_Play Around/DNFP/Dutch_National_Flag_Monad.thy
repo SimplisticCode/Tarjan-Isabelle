@@ -175,6 +175,13 @@ definition init_env:: "nat array \<Rightarrow> env" where
   "init_env l \<equiv> \<lparr>high = (length l),            low = 0,
                  i = 0,                         xs = l\<rparr>"
 
+text\<open>An alternative way to initialize a record\<close>
+definition init_env2:: "nat array \<Rightarrow> env" where
+  "init_env2 l \<equiv> env.make (length l) 0 0 l"
+
+lemma "init_env l = init_env2 l"
+  by(simp add: init_env_def init_env2_def env.defs)
+
 text\<open>A proof to show that the init-env will satisfy the invariant of the environment\<close>
 lemma "e = (init_env x) \<and> set(x) \<subseteq> {0,1,2} \<Longrightarrow> dnfp_variables_invariants e"
   unfolding init_env_def dnfp_variables_invariants_def

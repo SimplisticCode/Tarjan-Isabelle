@@ -1,7 +1,7 @@
-theory BinarySearch2
+theory BinarySearch_HL
 imports 
   Main
-  "../State_Monad_HL"
+  "../../HL_State"
 begin
 
 section\<open>Binary Search\<close>
@@ -45,16 +45,33 @@ theorem put_val_rule: "spec (\<lambda>x. p () (x \<lparr> val := v \<rparr>)) (p
 
 subsection\<open>Definitions of the methods\<close>
 definition update_left where
-  "update_left \<equiv> do{
-    mid \<leftarrow> get mid;
-    put left_Env (mid)
-  }"
+  "update_left \<equiv> 
+    left_Env := mid  
+   "
 
 definition update_right where
   "update_right \<equiv> do{
-    mid \<leftarrow> get mid;
-    put right_Env (mid)
+    right_Env := mid  
   }"
+
+lemma update_right_isSet_toMid: 
+   "Valid 
+     (\<lambda>e. mid e = x)
+     update_right
+     (\<lambda>e. right e = x \<and> mid e = x)"
+  unfolding Valid_def
+  apply(simp add: update_right_def assign1_def)
+
+  sledgehammer
+  sorry
+
+lemma skip_lemma: 
+   "Valid 
+     (\<lambda>e. mid e = x)
+     SKIP
+     (\<lambda>e. mid e = x)"
+  apply (simp add: SkipRule)
+
 
 text\<open>This method will update either the @{text right} or @{text left} variable, if @{text mid} is not the index that is pointing to @{text val}. If @{text mid} is pointing at @{text val} it will do nothing.\<close>
 definition update_range where
@@ -64,7 +81,7 @@ definition update_range where
                         update_left  
                     }else (if (xs ! mid > v) then do{
                         update_right
-                    }else skip
+                    }else SKIP
                     ))
                 }"
 

@@ -1,37 +1,8 @@
-theory Int_State_Monad_HL
+theory HL_PlayAround
 imports 
   Main
-  "~~/src/HOL/Library/State_Monad"
+  "../../HL_State"
 begin
-
-definition return:: "'a \<Rightarrow> ('b, 'a) state" where "return = State_Monad.return"
-definition get:: "(nat, nat) state" where "get = State (\<lambda>x. (x,x))"
-definition put:: "nat \<Rightarrow> (nat, unit) state" where "put x = State (\<lambda>_. ((),x))"
-definition skip:: "(nat, unit) state" where "skip = State (\<lambda>x. ((),x))"
-
-lemma monad_example1: "fst(run_state (do { return 1 }) 2) = 1" 
-  by (simp add: return_def)
-
-lemma monad_example2: "fst(run_state (do { put 1; x \<leftarrow> get; return x }) 2) = 1"
-  by (simp add: get_def put_def return_def)
-
-lemma monad_example3: "snd(run_state (do { put 1; x \<leftarrow> get; return x }) 2) = 1"
-  by (simp add: get_def put_def return_def)
-
-lemma monad_example4: 
-"fst((run_state (do { x \<leftarrow> return 1; put x; return x })::(nat \<Rightarrow> nat \<times> nat)) 2) = 1"
-  by (simp add: put_def return_def)
-
-lemma monad_example5: "snd((run_state (do { x \<leftarrow> return 1; put x })::(nat \<Rightarrow> unit \<times> nat)) 2) = 1"
-  by (simp add: put_def return_def)
-
-definition prog:: "(nat, nat) state" 
-  where "prog = do { a \<leftarrow> get; b \<leftarrow> return (a + 1); put b; return b }"
-
-definition init_prog:: "(nat, nat) state" where "init_prog = do { put 1; prog }"
-
-lemma monad_example6: "snd (run_state init_prog 0) = 2"
-  by (simp add: init_prog_def prog_def put_def get_def return_def)
 
 fun accfact:: "nat \<Rightarrow> nat \<Rightarrow> nat" where
 af1:  "accfact 0 a = a" |
